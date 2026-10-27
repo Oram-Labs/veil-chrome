@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Veil",
   "description": "Redacts email addresses, phone numbers, names and other sensitive values before claude.ai and chatgpt.com send them. Needs the Veil app.",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAsZeHmxvzfuFRN3i8kdE3arWfbWW1e7rFcCd8R9nmPEK0KHSfe1OxylT2dlWT9ZHWvDxBc02EiqRsPPDiX/1oV4H6QbI7MLfdxSL/Z/DWiYUUHYiHwYwh1Uva5CjhNxv6ewlZUgYWAv269pBD1YHXRBCXZC4tqOF0oNE0Wf6fwE1erOQX5Z9znWHwT11+mvoWgxIQUw79bLGXZbQFpzaQtBIoSahgDo/d1jCG0xehM6YorlqtQLzLUw2OGvapAIz0TvrnamFKdwqMlX0vOb8VjKkCUiAKLOwklF/VanzaegeKQbO93EnosjKjTTC2EbaJzhkifsNQUoM/ar2gj5qV1wIDAQAB",
   "minimum_chrome_version": "111",
   "permissions": [

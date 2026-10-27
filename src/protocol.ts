@@ -53,6 +53,46 @@ export interface VeilStatus {
   sites: Record<Site, boolean>;
   /** "Capture traffic" is on in Veil: report what the page does, for debugging. */
   capture?: boolean;
+  /** Which attached files to send to Veil. Absent from older versions. */
+  documents?: DocumentsView;
+}
+
+/** A type of document Veil reads. */
+export interface DocFormat {
+  id: string;
+  name: string;
+  /** Lower case, without the dot. */
+  extensions: string[];
+  mime_types: string[];
+}
+
+export interface DocumentsView {
+  enabled: boolean;
+  max_mb: number;
+  formats: DocFormat[];
+}
+
+/** A file the page is about to attach. */
+export interface DocRequest {
+  site: Site;
+  /** The page's path, which names the chat once it has started. */
+  page: string;
+  draft: string;
+  name: string;
+  size: number;
+  /** Base64. Absent when the file is larger than Veil reads. */
+  data?: string;
+}
+
+export interface DocDecision {
+  action: 'replace' | 'pass' | 'block';
+  /** Set with `replace`: attach `text` as a file of this name and type. */
+  name?: string;
+  mime?: string;
+  text?: string;
+  message?: string;
+  redacted: number;
+  pages: number;
 }
 
 /** Why the extension couldn't reach Veil. */
@@ -64,7 +104,7 @@ export type Failure =
   | 'timeout'
   | string;
 
-export type Op = 'status' | 'request' | 'response' | 'observe' | 'page_data';
+export type Op = 'status' | 'request' | 'response' | 'observe' | 'page_data' | 'document';
 
 /** Content script → service worker. */
 export interface Ask {

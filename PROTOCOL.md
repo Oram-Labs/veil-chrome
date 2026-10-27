@@ -22,10 +22,12 @@ Asked when a page on claude.ai or chatgpt.com loads, and by the popup. The paylo
 
 ```json
 { "version": "0.1.23", "running": true, "activated": true, "mode": "redact",
-  "fail_closed": true, "sites": { "claude.ai": true, "chatgpt.com": true }, "capture": false }
+  "fail_closed": true, "sites": { "claude.ai": true, "chatgpt.com": true }, "capture": false,
+  "documents": { "enabled": true, "max_mb": 25,
+    "formats": [{ "id": "pdf", "name": "PDF", "extensions": ["pdf"], "mime_types": ["application/pdf"] }] } }
 ```
 
-`sites` says which sites Veil protects. `capture` is the app's "Capture traffic" setting (see `observe`).
+`sites` says which sites Veil protects. `capture` is the app's "Capture traffic" setting (see `observe`). `documents` says which attached files to send to Veil (see `document`); until Veil answers, the extension treats PDFs as documents.
 
 ### `request`
 
@@ -35,7 +37,7 @@ A request the page is about to send. Sent only for requests that match `src/site
 { "site": "chatgpt.com", "method": "POST", "path": "/backend-api/f/conversation", "body": "<base64>" }
 ```
 
-`body` is absent for `GET`. The reply is a decision:
+`body` is absent for `GET`. A request that sends text also says which documents were attached before it, when there were any: `draft`, the page's draft id (see `document`), and `veil_files`, how many of the files uploaded since the last send were Veil's redacted text, so Veil doesn't count them as files it couldn't check. The reply is a decision:
 
 ```json
 { "action": "rewrite", "body": "<base64>", "ticket": "…", "redacted": 2 }
@@ -60,6 +62,28 @@ One chunk of the site's reply to a request that got a `ticket`, in order, as it 
 ```
 
 `status` and `content_type` come with the first chunk. The last call has `done: true`, and `error` if the reply broke off (for example `cancelled_by_page`). The reply is the bytes to give the page, with placeholders restored: `{"chunk": "<base64>"}`. It can be shorter than what was sent, when the end could be the start of a placeholder; the rest comes with a later chunk.
+
+### `document`
+
+A file the user is attaching on the site, of a type `status` lists in `documents`: picked in a file chooser, dropped or pasted (`src/catch.ts`). The extension stops the file before the page gets it and sends it here; other files go to the page untouched.
+
+```json
+{ "site": "claude.ai", "page": "/chat/<id>", "draft": "<random id>", "name": "contract.pdf", "size": 48213, "data": "<base64>" }
+```
+
+`page` is the page's path, which names the chat once it has started. A new chat has no id yet, so the page keeps a random `draft` id: documents are redacted under it, and the chat's first send carries it (see `request`), so the chat uses the same placeholders. `data` is absent when the file is larger than `documents.max_mb`. The reply is a decision:
+
+```json
+{ "action": "replace", "name": "contract (redacted).md", "mime": "text/markdown", "text": "…", "redacted": 5, "pages": 2 }
+```
+
+| `action` | What the extension does |
+|---|---|
+| `replace` | Gives the page a text file called `name`, holding `text`: the document's text with sensitive values replaced by placeholders |
+| `pass` | Gives the page the file as it is, for a file Veil can't read whose settings let it through; shows `message` |
+| `block` | Gives the page nothing; shows `message` |
+
+**If Veil can't be reached**, the file isn't attached, and the page says why, unless the user has turned on "send without protection" for that site. As a safety net, an upload whose body holds a document Veil hasn't seen is refused (`src/documents.ts`).
 
 ### `page_data`
 

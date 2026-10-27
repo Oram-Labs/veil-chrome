@@ -17,6 +17,10 @@ export interface Channel {
   blocked(message: string): void;
   /** Values replaced in a send. */
   counted(n: number): void;
+  /** What a send tells Veil about documents attached before it. */
+  attached?(): { draft?: string; veil_files?: number };
+  /** A send went out to the site. */
+  sent?(): void;
 }
 
 /** Reply chunks sent to Veil are at most this long. */
@@ -70,14 +74,16 @@ export function wrapFetch(
     if (method !== 'GET' && method !== 'HEAD') {
       body = new Uint8Array(await request.clone().arrayBuffer());
     }
+    const sending = sends(method, url.pathname);
     const answer = await channel.ask<Decision>('request', {
       site,
       method,
       path: url.pathname + url.search,
       body: body ? toBase64(body) : undefined,
+      ...(sending ? channel.attached?.() : undefined),
     });
     if (!answer.ok) {
-      if (!sends(method, url.pathname) || (await channel.allowUnprotected())) {
+      if (!sending || (await channel.allowUnprotected())) {
         return realFetch.call(this, request);
       }
       const message = failureMessage(answer.error);
@@ -96,6 +102,7 @@ export function wrapFetch(
         ? new Request(request, { body: fromBase64(decision.body) as BodyInit })
         : request;
     const response = await realFetch.call(this, outgoing);
+    if (sending) channel.sent?.();
     if (!decision.ticket || !response.body) return response;
     return restored(response, decision.ticket, channel);
   };

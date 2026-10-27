@@ -86,6 +86,22 @@ describe('wrapFetch', () => {
     expect(chunks.every((c) => c.ticket === 't1')).toBe(true);
   });
 
+  it('tells Veil about documents attached before a send, and when it went out', async () => {
+    const real = vi.fn(async () => new Response('ok'));
+    const { ch, asked } = channel(() => ({ ok: true, result: { action: 'pass', redacted: 0 } }));
+    const sent = vi.fn();
+    ch.attached = () => ({ draft: 'd1', veil_files: 1 });
+    ch.sent = sent;
+    const f = wrapFetch(real as unknown as typeof fetch, 'chatgpt.com', ch, () => BASE);
+    await f('/backend-api/f/conversation', send);
+    expect(asked[0].payload).toMatchObject({ draft: 'd1', veil_files: 1 });
+    expect(sent).toHaveBeenCalledTimes(1);
+    // Reading a chat isn't a send.
+    await f('/backend-api/conversation/abc');
+    expect(asked[1].payload.draft).toBeUndefined();
+    expect(sent).toHaveBeenCalledTimes(1);
+  });
+
   it('blocks a send that Veil blocks, and says why', async () => {
     const real = vi.fn();
     const { ch, blocked } = channel(() => ({ ok: true, result: { action: 'block', message: 'Veil is paused.', redacted: 0 } }));

@@ -5,6 +5,8 @@
 // handed over in the first message of the page load, before any site script
 // exists, and the bridge accepts only that first one.
 
+import { catchFiles } from './catch';
+import { Documents, guardFetch, guardXhr, type Notices } from './documents';
 import { wrapFetch, type Channel } from './intercept';
 import { gated, observeFetch, observePage } from './observe';
 import { hookPageData } from './pagedata';
@@ -56,7 +58,28 @@ import { interesting } from './sites';
     counted(n) {
       port1.postMessage({ id: 0, kind: 'counted', n });
     },
+    attached: () => docs.context(),
+    sent: () => docs.sent(),
   };
+  const notices: Notices = {
+    info: (message) => port1.postMessage({ id: 0, kind: 'notice', message }),
+    blocked: (message) => channel.blocked(message),
+  };
+
+  const status = channel.ask<VeilStatus>('status', undefined);
+  // Documents the user attaches go to Veil first; see documents.ts.
+  const docs = new Documents(site, channel, notices, status.then((a) => (a.ok ? a.result.documents : undefined)));
+  // How each document reached the page goes into the capture, so a site
+  // that ignores Veil's file can be seen.
+  catchFiles(window, docs, (how, detail) => report({ site, kind: 'veil_document', detail: { how, ...detail } }));
+  // XHR can't wait for the answer, so it uses the last one.
+  let unprotected = false;
+  const allow = async () => (unprotected = await channel.allowUnprotected());
+  void allow();
+  guardXhr(XMLHttpRequest.prototype, docs, notices, () => {
+    void allow();
+    return unprotected;
+  });
 
   // On a reload chatgpt.com puts the open chat in the HTML; restore it
   // before the page reads it. A chunk Veil doesn't answer in time is kept.
@@ -72,13 +95,18 @@ import { interesting } from './sites';
 
   // With "Capture traffic" on in Veil, everything the page does on the site
   // is reported too, for debugging. Until Veil answers, reports are held.
-  const capture = channel.ask<VeilStatus>('status', undefined).then((a) => a.ok && a.result.capture === true);
+  const capture = status.then((a) => a.ok && a.result.capture === true);
   const report = gated((observation) => void channel.ask('observe', observation), capture);
   observePage(site, report);
 
   const realFetch = window.fetch.bind(window);
-  const wrapped = observeFetch(wrapFetch(realFetch, site, channel), site, report, (method, path) =>
-    interesting(site, method, path.split('?')[0]),
+  const wrapped = guardFetch(
+    observeFetch(wrapFetch(realFetch, site, channel), site, report, (method, path) =>
+      interesting(site, method, path.split('?')[0]),
+    ),
+    docs,
+    notices,
+    allow,
   );
   // Keep the name and `toString()` looking native; some sites check.
   Object.defineProperty(wrapped, 'name', { value: 'fetch' });

@@ -10,7 +10,14 @@ const link = new NativeLink(
 );
 
 chrome.runtime.onMessage.addListener((msg: Ask, sender, sendResponse) => {
-  if (msg.op === 'status' || msg.op === 'request' || msg.op === 'response' || msg.op === 'observe' || msg.op === 'page_data') {
+  if (
+    msg.op === 'status' ||
+    msg.op === 'request' ||
+    msg.op === 'response' ||
+    msg.op === 'observe' ||
+    msg.op === 'page_data' ||
+    msg.op === 'document'
+  ) {
     // Only our own content scripts and popup can send these.
     if (sender.id !== chrome.runtime.id) return false;
     // Status checks say which version of the extension asks; the Veil app

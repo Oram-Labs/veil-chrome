@@ -44,7 +44,65 @@ const page = (site: string) => `<!doctype html>
   <button id="send">Send</button>
   <pre id="reply"></pre>
   <pre id="status"></pre>
+  <input type="file" id="file" multiple>
+  <div id="menu"><input type="file" id="menu-file"></div>
+  <button id="sneak">Upload a PDF made by the page</button>
+  <div id="drop" style="width:200px;height:80px;border:1px dashed">Drop files here</div>
+  <pre id="uploads"></pre>
   <script>
+    // Files are uploaded as soon as they are picked, as the real sites do.
+    const uploaded = (line) => (document.getElementById('uploads').textContent += line + '\\n');
+    document.getElementById('file').addEventListener('change', async (e) => {
+      for (const f of e.target.files) {
+        const form = new FormData();
+        form.append('file', f, f.name);
+        const r = await fetch('/upload', { method: 'POST', body: form });
+        uploaded(f.name + ' ' + r.status);
+      }
+    });
+    // As claude.ai does: files pasted into the chat box are uploaded too.
+    document.getElementById('box').addEventListener('paste', async (e) => {
+      for (const f of e.clipboardData.files) {
+        e.preventDefault();
+        const form = new FormData();
+        form.append('file', f, f.name);
+        const r = await fetch('/upload', { method: 'POST', body: form });
+        uploaded('pasted ' + f.name + ' ' + r.status);
+      }
+    });
+    const drop = document.getElementById('drop');
+    drop.addEventListener('dragover', (e) => e.preventDefault());
+    // As claude.ai does: an overlay while a drag is over the page.
+    // It closes when the drag leaves the page or on a drop.
+    let depth = 0;
+    window.addEventListener('dragenter', () => (depth++, (drop.dataset.dragging = 'yes')));
+    window.addEventListener('dragleave', () => {
+      depth = Math.max(0, depth - 1);
+      if (depth === 0) delete drop.dataset.dragging;
+    });
+    drop.addEventListener('drop', async (e) => {
+      e.preventDefault();
+      // As claude.ai does: a drop whose types don't include Files is
+      // ignored, and the overlay stays.
+      if (!e.dataTransfer.types.includes('Files')) return;
+      depth = 0;
+      delete drop.dataset.dragging;
+      for (const f of e.dataTransfer.files) {
+        const form = new FormData();
+        form.append('file', f, f.name);
+        const r = await fetch('/upload', { method: 'POST', body: form });
+        uploaded('dropped ' + f.name + ' ' + r.status);
+      }
+    });
+    document.getElementById('sneak').onclick = async () => {
+      const f = new File(['%PDF-1.4 made by the page'], 'sneak.pdf', { type: 'application/pdf' });
+      try {
+        const r = await fetch('/upload', { method: 'POST', body: f });
+        uploaded('sneak ' + r.status);
+      } catch {
+        uploaded('sneak failed');
+      }
+    };
     const site = ${JSON.stringify(site)};
     document.getElementById('send').onclick = async () => {
       const text = document.getElementById('box').value;
@@ -149,6 +207,11 @@ export async function startSites(tls: { key: Buffer; cert: Buffer }): Promise<{ 
         return;
       }
       received.push({ host, path: req.url ?? '', body });
+      if (req.url === '/upload') {
+        res.writeHead(200, { 'content-type': 'application/json' });
+        res.end('{"ok":true}');
+        return;
+      }
       const json = JSON.parse(body);
       const said = site === 'chatgpt.com' ? json.messages[0].content.parts[0] : json.prompt;
       res.writeHead(200, { 'content-type': 'text/event-stream; charset=utf-8', 'cache-control': 'no-cache' });
