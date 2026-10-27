@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { interesting, sends } from '../src/sites';
-import { describe as view } from '../src/popup/describe';
+import { describe as view, openOutcome } from '../src/popup/describe';
 import { fromBase64, siteOf, toBase64, type VeilStatus } from '../src/protocol';
 
 describe('sites', () => {
@@ -63,5 +63,20 @@ describe('popup', () => {
       siteState: 'Sending unprotected',
       count: '1 value hidden in this tab.',
     });
+  });
+
+  it('offers the download or opening Veil when it cannot be reached', () => {
+    expect(view({ ok: false, error: 'no_host' }, null, 0, false).action).toEqual({
+      kind: 'download',
+      label: 'Download Veil',
+      href: 'https://getveil.tech/#download',
+    });
+    expect(view({ ok: false, error: 'not_running' }, 'claude.ai', 0, false).action).toEqual({ kind: 'open', label: 'Open Veil' });
+    expect(view({ ok: true, result: status }, 'claude.ai', 0, false).action).toBeUndefined();
+  });
+
+  it('waits for Veil after opening it, unless this version cannot open itself', () => {
+    expect(openOutcome({ ok: true, result: { started: true } })).toEqual({ wait: true });
+    expect(openOutcome({ ok: false, error: 'unknown_op' })).toMatchObject({ wait: false });
   });
 });

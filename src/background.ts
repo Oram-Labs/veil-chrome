@@ -16,10 +16,13 @@ chrome.runtime.onMessage.addListener((msg: Ask, sender, sendResponse) => {
     msg.op === 'response' ||
     msg.op === 'observe' ||
     msg.op === 'page_data' ||
-    msg.op === 'document'
+    msg.op === 'document' ||
+    msg.op === 'open'
   ) {
     // Only our own content scripts and popup can send these.
     if (sender.id !== chrome.runtime.id) return false;
+    // Opening the app is the popup's button; the sites' pages have no say.
+    if (msg.op === 'open' && sender.tab !== undefined) return false;
     // Status checks say which version of the extension asks; the Veil app
     // shows it on its General screen.
     const payload = msg.op === 'status' ? ({ extension: chrome.runtime.getManifest().version } satisfies StatusAsk) : msg.payload;

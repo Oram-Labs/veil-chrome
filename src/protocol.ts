@@ -48,6 +48,9 @@ export interface VeilStatus {
   version: string;
   running: boolean;
   activated: boolean;
+  /** The last day of the key's updates (YYYY-MM-DD): it covers versions
+   * released up to then. Absent while not activated, and from older versions. */
+  updates_until?: string;
   mode: 'redact' | 'audit' | 'off';
   fail_closed: boolean;
   sites: Record<Site, boolean>;
@@ -110,7 +113,8 @@ export type Failure =
   | 'timeout'
   | string;
 
-export type Op = 'status' | 'request' | 'response' | 'observe' | 'page_data' | 'document';
+/** `open` starts the Veil app (the popup's "Open Veil" button). */
+export type Op = 'status' | 'request' | 'response' | 'observe' | 'page_data' | 'document' | 'open';
 
 /** Content script → service worker. */
 export interface Ask {

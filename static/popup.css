@@ -42,6 +42,11 @@
   box-sizing: border-box;
 }
 
+/* Stays hidden even when a class sets `display`. */
+[hidden] {
+  display: none !important;
+}
+
 body {
   margin: 0;
   width: 320px;
@@ -169,6 +174,58 @@ input[type='checkbox']:checked::after {
 input[type='checkbox']:focus-visible {
   outline: 2px solid var(--focus);
   outline-offset: 2px;
+}
+
+.action {
+  margin: -2px 0 12px;
+}
+
+.button {
+  display: inline-block;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 6px 14px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--accent);
+  color: var(--surface);
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.button:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.action .muted {
+  margin-top: 8px;
+}
+
+.update {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 13px;
+}
+
+.update a {
+  flex: none;
+  color: var(--text);
+  font-weight: 600;
+}
+
+.update a:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+  border-radius: 2px;
 }
 
 .help {

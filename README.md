@@ -25,7 +25,7 @@ The redaction itself is done by the open-source [veil-engine](https://github.com
 
 Each of these is checked by a test (`tests/guarantees.test.ts`, `e2e/mock.spec.ts`):
 
-- **It talks only to the Veil app.** No server addresses in its code, no connections of its own; it reaches the app through the native messaging host `com.veil.app.native` and nothing else.
+- **What you type goes only to the Veil app.** It reaches the app through the native messaging host `com.veil.app.native`. Its one connection of its own is the popup reading `https://getveil.tech/download/latest.json`, at most every 6 hours, to say when a newer Veil or extension is out: a plain GET, without cookies, that carries nothing about you (`src/popup/update.ts`).
 - **It only wraps the page's own requests.** `fetch` goes through Veil first. `XMLHttpRequest`, `WebSocket` and `EventSource` are wrapped only to report traffic while "Capture traffic" is on in the app. On chatgpt.com it also passes the chat data built into a reloaded page through Veil.
 - **It only touches the requests that can carry chat text** (`src/sites.ts`). Everything else goes to the site untouched, without reaching the app.
 - **It fails closed.** If the app can't be reached, messages are blocked and the page says why, unless you chose "send without protection" for that site in the popup.

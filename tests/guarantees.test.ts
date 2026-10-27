@@ -57,14 +57,17 @@ describe('permissions', () => {
 });
 
 describe('the network', () => {
-  it('has no addresses of its own in the code', () => {
-    expect(found(/\b(https?|wss?):\/\/[^\s'"`]*/g)).toEqual([]);
+  it('has one address of its own in the code: the site, for the popup\'s version file', () => {
+    expect(found(/\b(https?|wss?):\/\/[^\s'"`]*/g)).toEqual(['popup/update.ts: https://getveil.tech']);
   });
 
-  it('opens no connections of its own: it only wraps the page\'s own, to inspect them', () => {
+  it('opens one connection of its own, the popup\'s version check; otherwise it only wraps the page\'s own', () => {
     expect(found(/\bnew\s+(WebSocket|XMLHttpRequest|EventSource)\s*\(|sendBeacon|sendNativeMessage/g)).toEqual([]);
-    // Calls of `fetch`: the page's own fetch, passed on by the page hook's wrappers.
-    expect(found(/(?<![\w.])fetch\s*\(/g)).toEqual(['hook.ts: fetch(', 'observe.ts: fetch(']);
+    // Calls of `fetch`: the page's own fetch, passed on by the page hook's
+    // wrappers, and the popup's GET of latest.json (without cookies).
+    expect(found(/(?<![\w.])fetch\s*\(/g)).toEqual(['hook.ts: fetch(', 'observe.ts: fetch(', 'popup/update.ts: fetch(']);
+    expect(found(/LATEST_URL = [^;]*/g)).toEqual(['popup/update.ts: LATEST_URL = `${SITE}/download/latest.json`']);
+    expect(found(/credentials: '[a-z-]+'/g)).toEqual(["popup/update.ts: credentials: 'omit'"]);
   });
 
   it('talks to the Veil app only, through its native messaging host', () => {
@@ -94,11 +97,12 @@ describe('the page', () => {
 });
 
 describe('storage', () => {
-  it('holds counts and preferences, never text', () => {
+  it('holds counts, preferences and the latest version numbers, never text', () => {
     expect(found(/chrome\.storage\.\w+\.(set|remove)\([^)]*\)/g)).toEqual([
       'background.ts: chrome.storage.session.remove(`count:${tab}`)',
       'background.ts: chrome.storage.session.set({ [key]: total })',
       'popup/popup.ts: chrome.storage.local.set({ prefs: next })',
+      'popup/update.ts: chrome.storage.local.set({ latest: { at: now, data: parseLatest(data)',
     ]);
   });
 });

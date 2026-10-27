@@ -13,6 +13,11 @@
       <span id="badge" class="badge">…</span>
     </header>
     <p id="summary" class="summary">Checking…</p>
+    <div id="action" class="action" hidden>
+      <a id="download" class="button" target="_blank" rel="noreferrer" hidden></a>
+      <button id="open" class="button" type="button" hidden></button>
+      <p id="action-note" class="muted" hidden></p>
+    </div>
     <section id="site" class="card" hidden>
       <div class="row">
         <span id="site-name" class="site"></span>
@@ -29,6 +34,7 @@
         <input id="unprotected" type="checkbox" role="switch" />
       </label>
     </section>
+    <div id="updates"></div>
     <p id="help" class="muted help"></p>
     <p id="versions" class="muted versions"></p>
     <script src="popup.js"></script>

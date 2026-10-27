@@ -1,0 +1,35 @@
+Use Claude and ChatGPT without handing over your private details.
+
+Veil hides names, email addresses, phone numbers, card numbers and other sensitive values before claude.ai or chatgpt.com send your message. The AI service only sees placeholders. When the reply comes back, Veil puts the real values back in, so you read and copy the answer as if nothing had been hidden.
+
+HOW IT WORKS
+1. You write your message as usual.
+2. Before the site sends it, the extension passes it to the Veil app on your computer. The app swaps each sensitive value for a placeholder, such as EMAIL_1 or PHONE_1.
+3. The AI service gets the message with placeholders only.
+4. In the reply, Veil swaps the placeholders back for your real values.
+
+Redaction runs on your computer. Your real values are not sent to the AI service, and they are not sent to us.
+
+WHAT VEIL HIDES
+• Email addresses and phone numbers
+• Card numbers and bank accounts (IBANs), validated to keep false alarms low
+• API keys, tokens and passwords
+• IP addresses and web addresses
+• National ID numbers
+• Names of people, companies and places, with optional name detection that runs on your computer
+• Your own words: client names, project codenames, internal terms and custom rules
+
+ATTACHED DOCUMENTS
+PDFs and text files you attach (TXT, Markdown, CSV, JSON, code and similar) are redacted the same way before the site uploads them. The site gets their text, with the sensitive values replaced.
+
+NOTHING SLIPS THROUGH
+If the Veil app isn't running, messages on protected sites wait instead of going out unprotected, and a notice tells you to open Veil. You can turn this off per site if you prefer.
+
+AT A GLANCE
+The toolbar button shows whether the current site is protected and how many values were hidden in the tab.
+
+REQUIREMENTS
+This extension needs the Veil app for Mac, Windows or Linux, which does the detection and keeps your values. You choose the protected sites in Veil, under Client setup. Supported sites: claude.ai and chatgpt.com.
+
+PRIVACY
+What you type goes only to the Veil app on your computer. The extension's only request of its own reads a version file from getveil.tech, to tell you when a newer Veil is out. It has no analytics or tracking, and it does not collect or sell your data.

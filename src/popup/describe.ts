@@ -1,6 +1,7 @@
 // What the popup says, as plain data so it can be tested.
 
 import type { Answer, Site, VeilStatus } from '../protocol';
+import { SITE } from './update';
 
 export interface View {
   badge: string;
@@ -9,6 +10,8 @@ export interface View {
   siteState: string;
   count: string;
   help: string;
+  /** A button under the summary: download the app, or open it. */
+  action?: { kind: 'download'; label: string; href: string } | { kind: 'open'; label: string };
 }
 
 export function describe(status: Answer<VeilStatus>, site: Site | null, count: number, unprotected: boolean): View {
@@ -29,6 +32,9 @@ export function describe(status: Answer<VeilStatus>, site: Site | null, count: n
         : unprotected
           ? 'Open the Veil app. Until then, messages on this site are sent unprotected.'
           : 'Open the Veil app. Until then, messages on this site are blocked, not sent unprotected.',
+      action: missing
+        ? { kind: 'download', label: 'Download Veil', href: `${SITE}/#download` }
+        : { kind: 'open', label: 'Open Veil' },
     };
   }
   const s = status.result;
@@ -72,4 +78,11 @@ export function describe(status: Answer<VeilStatus>, site: Site | null, count: n
     count: count_text,
     help: site ? `Veil ${s.version}. Choose protected sites in Veil, under Client setup.` : 'Open claude.ai or chatgpt.com to see this site.',
   };
+}
+
+/** After "Open Veil": wait for Veil to start, or say why it can't. */
+export function openOutcome(answer: Answer): { wait: true } | { wait: false; note: string } {
+  if (answer.ok) return { wait: true };
+  // Versions of Veil before the button don't know how to open themselves.
+  return { wait: false, note: 'Open Veil from your Applications folder or Start menu.' };
 }

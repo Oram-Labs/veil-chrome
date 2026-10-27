@@ -18,7 +18,7 @@ Oct 2026. The extension's own risks. The redaction it relies on is covered by [v
 ## What the extension sees, and where it goes
 
 - **It sees** every request and reply on claude.ai and chatgpt.com that can carry chat text (`src/sites.ts`), and the chat data built into chatgpt.com pages on a reload.
-- **It sends them only to the Veil app**, through the native messaging host `com.veil.app.native`. It has no server addresses in its code and opens no connections of its own (`tests/guarantees.test.ts`).
+- **It sends them only to the Veil app**, through the native messaging host `com.veil.app.native`. Its one connection of its own is the popup's GET of `https://getveil.tech/download/latest.json`, without cookies and with nothing about you in it, to say when a newer version is out; it's the only server address in its code (`tests/guarantees.test.ts`).
 - **It stores** only the number of values replaced in each tab (until the tab closes) and your preferences. No text.
 - **With "Capture traffic" on in the app**, a debugging setting, the extension also reports what the chat page does, with request and reply bodies, to the app, which writes them to its capture folder on your computer. These hold real values and stay on the computer. Nothing is reported while it's off.
 

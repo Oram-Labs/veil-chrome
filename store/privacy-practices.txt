@@ -1,0 +1,45 @@
+CHROME WEB STORE: PRIVACY PRACTICES TAB
+Paste each answer into the field it's named after.
+
+------------------------------------------------------------------
+Single purpose description
+------------------------------------------------------------------
+Veil hides sensitive values, such as names, email addresses, phone numbers and card numbers, from messages and attached documents before claude.ai and chatgpt.com send them, and puts the real values back in the replies. Detection and replacement are done by the Veil desktop app on the user's computer; the extension connects those two sites to it.
+
+------------------------------------------------------------------
+nativeMessaging justification
+------------------------------------------------------------------
+The redaction is done by the Veil desktop app, which the user installs separately. The extension uses native messaging to send each outgoing message (and any attached document) on the protected sites to that app on the same computer, and to get back the redacted text and the values to restore in replies. It also asks the app whether it is running and which sites the user chose to protect. Native messaging is the only channel the extension uses for user content; nothing is sent to a server.
+
+------------------------------------------------------------------
+storage justification
+------------------------------------------------------------------
+chrome.storage.local keeps the user's per-site setting "Send without Veil when it isn't running" and a cached copy of the latest Veil version number, so the popup can say when an update is available without checking on every open. chrome.storage.session keeps the count of hidden values per tab for the toolbar badge, and is cleared when the tab closes. No message content or personal data is stored.
+
+------------------------------------------------------------------
+Host permission justification
+------------------------------------------------------------------
+The extension runs only on https://claude.ai/* and https://chatgpt.com/*, the two AI chat sites it protects. On those pages it has to see each outgoing request before it is sent so it can replace sensitive values with placeholders, and see the replies so it can put the real values back. It does not run on, read or change any other site.
+
+------------------------------------------------------------------
+Are you using remote code?
+------------------------------------------------------------------
+Select: No, I am not using remote code.
+Justification (if a field is still shown):
+All JavaScript is bundled in the extension package. The extension does not load or run code from any server, and does not use eval or similar. The only network request it makes itself is a GET of https://getveil.tech/download/latest.json, a JSON file with the latest version number, which is read as data and never run.
+
+------------------------------------------------------------------
+Data usage
+------------------------------------------------------------------
+Suggested: leave every data type unchecked. Message text and documents are handled on the user's device: they go only to the Veil app on the same computer, never to the developer or any third party. The extension has no analytics, accounts or tracking.
+
+Tick all three certifications:
+- I do not sell or transfer user data to third parties, outside of the approved use cases.
+- I do not use or transfer user data for purposes that are unrelated to my item's single purpose.
+- I do not use or transfer user data to determine creditworthiness or for lending purposes.
+
+------------------------------------------------------------------
+Privacy policy URL
+------------------------------------------------------------------
+Needed if any data type is ticked, and recommended anyway:
+https://getveil.tech/privacy

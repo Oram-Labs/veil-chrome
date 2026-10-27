@@ -1,6 +1,6 @@
 # Protocol: what the extension sends to the Veil app
 
-The extension talks to one program only: the native messaging host `com.veil.app.native`, which the Veil app installs. Chrome starts the host and connects the extension to it over the host's standard input and output. The extension makes no network requests of its own.
+The extension talks to one program only: the native messaging host `com.veil.app.native`, which the Veil app installs. Chrome starts the host and connects the extension to it over the host's standard input and output. The extension's only network request of its own is the popup's GET of `https://getveil.tech/download/latest.json`, at most every 6 hours, to say when a newer version is out (`src/popup/update.ts`); it sends nothing about the user.
 
 This document is what that program receives. The Veil app's implementation is not open source; `e2e/mock-host.mjs` is a small stand-in that answers the same messages, for the tests.
 
@@ -29,7 +29,7 @@ Asked when a page on claude.ai or chatgpt.com loads, and by the popup. The paylo
       { "id": "text", "name": "Text", "extensions": ["txt", "md", "csv", "json", "env", "py", "…"], "mime_types": ["text/plain", "…"], "guard": false } ] } }
 ```
 
-`sites` says which sites Veil protects. `capture` is the app's "Capture traffic" setting (see `observe`). `documents` says which attached files to send to Veil (see `document`): by extension (a name that starts with a dot also counts its first part, so `.env.local` is an `env` file) or by media type. `guard` says whether the safety net below applies to that type; absent means true. Until Veil answers, the extension uses a built-in list of PDF and the common text types.
+`updates_until` is the last day of the license key's updates (`YYYY-MM-DD`), present while the key is accepted: the key covers app versions released up to then, so the popup offers a newer version's download only if the key covers it, and renewing otherwise. `sites` says which sites Veil protects. `capture` is the app's "Capture traffic" setting (see `observe`). `documents` says which attached files to send to Veil (see `document`): by extension (a name that starts with a dot also counts its first part, so `.env.local` is an `env` file) or by media type. `guard` says whether the safety net below applies to that type; absent means true. Until Veil answers, the extension uses a built-in list of PDF and the common text types.
 
 ### `request`
 
@@ -112,6 +112,10 @@ Sent only while "Capture traffic" is on in the Veil app (`status` says `capture:
 ```
 
 The app writes each report to its capture folder on the computer. These reports hold page content as it was, real values included; they never leave the computer. Nothing is reported while capture is off. The reply is `{"written": true}` or `{"written": false}`.
+
+### `open`
+
+Sent only by the popup's **Open Veil** button, when the app is installed but not running. The host, which is the app's own program started by Chrome, opens the app (on macOS through Launch Services) and answers `{"started": true}`, or `{"started": false}` if Veil was already running. The extension doesn't accept it from pages. Apps before 0.1.28 answer `unknown_op`, and the popup then says to open Veil from Applications or the Start menu.
 
 ### `ping`
 
