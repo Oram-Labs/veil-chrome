@@ -43,6 +43,10 @@ describe('permissions', () => {
     }
   });
 
+  it('fit the Chrome Web Store, which refuses a description over 132 characters', () => {
+    expect(manifest.description.length).toBeLessThanOrEqual(132);
+  });
+
   it('let no web page or other extension talk to it, and load no remote code', () => {
     for (const key of ['externally_connectable', 'web_accessible_resources', 'optional_permissions', 'optional_host_permissions', 'content_security_policy']) {
       expect(manifest[key], key).toBeUndefined();

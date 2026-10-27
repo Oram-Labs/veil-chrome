@@ -1,9 +1,9 @@
 name: Release
 
 # Runs when a version tag is pushed, e.g. `git tag v0.1.1 && git push origin
-# v0.1.1`. Builds the zip, records a build attestation (which links the zip to
-# this commit and workflow) and creates a GitHub release with the zip and its
-# SHA-256. Nothing else is published: the site and the Chrome Web Store are
+# v0.1.1`. Builds the two zips (the -store one has no "key", for the Chrome Web
+# Store), records a build attestation for each (which links it to this commit
+# and workflow) and creates a GitHub release with them and their SHA-256. Nothing else is published: the site and the Chrome Web Store are
 # updated separately.
 on:
   push:
@@ -36,16 +36,21 @@ jobs:
       - name: Checksum
         run: |
           cd dist
-          sha256sum "veil-extension-$VERSION.zip" > "veil-extension-$VERSION.zip.sha256"
-          cat "veil-extension-$VERSION.zip.sha256"
+          for zip in "veil-extension-$VERSION.zip" "veil-extension-$VERSION-store.zip"; do
+            sha256sum "$zip" > "$zip.sha256"
+            cat "$zip.sha256"
+          done
       - uses: actions/attest-build-provenance@v2
         with:
-          subject-path: dist/veil-extension-${{ env.VERSION }}.zip
+          subject-path: |
+            dist/veil-extension-${{ env.VERSION }}.zip
+            dist/veil-extension-${{ env.VERSION }}-store.zip
       - name: GitHub release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release create "$GITHUB_REF_NAME" \
             "dist/veil-extension-$VERSION.zip" "dist/veil-extension-$VERSION.zip.sha256" \
+            "dist/veil-extension-$VERSION-store.zip" "dist/veil-extension-$VERSION-store.zip.sha256" \
             --title "veil-chrome $VERSION" \
-            --notes "Check it with \`pnpm verify veil-extension-$VERSION.zip\` at this tag, or with \`gh attestation verify veil-extension-$VERSION.zip --repo $GITHUB_REPOSITORY\`."
+            --notes "The -store zip is the one uploaded to the Chrome Web Store: the same files without \"key\" in manifest.json. Check either with \`pnpm verify <zip>\` at this tag, or with \`gh attestation verify <zip> --repo $GITHUB_REPOSITORY\`."

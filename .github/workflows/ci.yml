@@ -23,16 +23,16 @@ jobs:
       # Unit tests, and the guarantee tests: permissions, no network code of
       # its own, the page objects it replaces, what it stores.
       - run: pnpm test
-      - name: The zip is reproducible
+      - name: The zips are reproducible
         run: |
           pnpm zip
-          first=$(sha256sum dist/veil-extension-*.zip | cut -d' ' -f1)
+          first=$(sha256sum dist/veil-extension-*.zip)
           pnpm zip
-          second=$(sha256sum dist/veil-extension-*.zip | cut -d' ' -f1)
-          echo "sha256 $first"
+          second=$(sha256sum dist/veil-extension-*.zip)
+          echo "$first"
           [ "$first" = "$second" ] || { echo "two builds of the same source gave different zips"; exit 1; }
-      - name: The zip verifies against the source
-        run: pnpm verify dist/veil-extension-*.zip
+      - name: The zips verify against the source
+        run: for zip in dist/veil-extension-*.zip; do pnpm verify "$zip"; done
       - run: npx playwright install --with-deps chromium
       # Chromium with the extension, against local stand-ins for the sites and
       # e2e/mock-host.mjs for the Veil app.

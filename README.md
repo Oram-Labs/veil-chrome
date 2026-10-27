@@ -55,7 +55,7 @@ pnpm verify <the extension's folder>
 
 Chrome keeps the extension it installed from the Store in your profile, under `Extensions/lanejpecogmomcibpjcomddmkgpagneb/<version>_0`. On macOS that is `~/Library/Application Support/Google/Chrome/Default/Extensions/…`; on Windows, `%LOCALAPPDATA%\Google\Chrome\User Data\Default\Extensions\…`; on Linux, `~/.config/google-chrome/Default/Extensions/…`.
 
-`pnpm verify` builds the extension again and compares every file. The Store's copy differs only in two fields the Store sets in `manifest.json`, `key` and `update_url`, and a `_metadata` folder it adds; `verify` reports those and allows them. It also takes a release zip from GitHub: each release lists its zip's SHA-256, with a build attestation linking it to the release's commit.
+`pnpm verify` builds the extension again and compares every file. The Store's copy differs only in two fields the Store sets in `manifest.json`, `key` and `update_url`, and a `_metadata` folder it adds; `verify` reports those and allows them. It also takes a release zip from GitHub: each release has two, `veil-extension-<version>.zip` and the `-store.zip` uploaded to the Chrome Web Store (the same files without `key`), each with its SHA-256 and a build attestation linking it to the release's commit.
 
 ## Develop
 
@@ -66,7 +66,7 @@ pnpm install --frozen-lockfile
 pnpm check        # types
 pnpm test         # unit tests and the guarantee tests
 pnpm build        # dist/unpacked
-pnpm zip          # dist/veil-extension-<version>.zip, and its SHA-256
+pnpm zip          # dist/veil-extension-<version>.zip, and -store.zip without "key" for the Store
 pnpm test:e2e     # Chromium with the extension, against local stand-ins
 ```
 
