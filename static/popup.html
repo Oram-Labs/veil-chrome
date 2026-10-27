@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Veil</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <header>
+      <img src="icon-32.png" alt="" width="20" height="20" />
+      <h1>Veil</h1>
+      <span id="badge" class="badge">…</span>
+    </header>
+    <p id="summary" class="summary">Checking…</p>
+    <section id="site" class="card" hidden>
+      <div class="row">
+        <span id="site-name" class="site"></span>
+        <span id="site-state" class="state"></span>
+      </div>
+      <p id="count" class="muted"></p>
+    </section>
+    <section id="fallback" class="card" hidden>
+      <label class="row toggle">
+        <span>
+          <span class="label">Send without Veil when it isn't running</span>
+          <span class="muted">Off: messages on this site wait until Veil is running.</span>
+        </span>
+        <input id="unprotected" type="checkbox" role="switch" />
+      </label>
+    </section>
+    <p id="help" class="muted help"></p>
+    <p id="versions" class="muted versions"></p>
+    <script src="popup.js"></script>
+  </body>
+</html>

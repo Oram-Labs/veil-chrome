@@ -1,0 +1,39 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm check
+      # Unit tests, and the guarantee tests: permissions, no network code of
+      # its own, the page objects it replaces, what it stores.
+      - run: pnpm test
+      - name: The zip is reproducible
+        run: |
+          pnpm zip
+          first=$(sha256sum dist/veil-extension-*.zip | cut -d' ' -f1)
+          pnpm zip
+          second=$(sha256sum dist/veil-extension-*.zip | cut -d' ' -f1)
+          echo "sha256 $first"
+          [ "$first" = "$second" ] || { echo "two builds of the same source gave different zips"; exit 1; }
+      - name: The zip verifies against the source
+        run: pnpm verify dist/veil-extension-*.zip
+      - run: npx playwright install --with-deps chromium
+      # Chromium with the extension, against local stand-ins for the sites and
+      # e2e/mock-host.mjs for the Veil app.
+      - run: pnpm test:e2e

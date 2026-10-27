@@ -1,0 +1,181 @@
+/* Tokens from app/ui/src/app.css, so the popup looks like the app. */
+:root {
+  --ground: #f3f4f8;
+  --surface: #ffffff;
+  --line: #dcdee6;
+  --text: #151722;
+  --muted: #585d6e;
+  --accent: #35373e;
+  --green: #11663a;
+  --green-soft: #e2f4e8;
+  --yellow: #735400;
+  --yellow-soft: #fbf1cc;
+  --red: #9b1c13;
+  --red-soft: #fbe9e7;
+  --switch-off: #8a8fa0;
+  --focus: #4b4fc8;
+  --radius: 10px;
+  --font: 'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ground: #101117;
+    --surface: #1a1c24;
+    --line: #2c2f3b;
+    --text: #e7e8f0;
+    --muted: #a3a7b6;
+    --accent: #d9dae0;
+    --green: #8ee0ad;
+    --green-soft: #12301f;
+    --yellow: #f2d47a;
+    --yellow-soft: #33290a;
+    --red: #ffb3aa;
+    --red-soft: #3a1714;
+    --switch-off: #5d6272;
+    color-scheme: dark;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  width: 320px;
+  padding: 14px 16px 16px;
+  background: var(--ground);
+  color: var(--text);
+  font: 14px/1.45 var(--font);
+}
+
+header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+h1 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  flex: 1;
+}
+
+.badge {
+  font-size: 12px;
+  font-weight: 500;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--line);
+  color: var(--text);
+}
+
+.badge.ok {
+  background: var(--green-soft);
+  color: var(--green);
+}
+
+.badge.warn {
+  background: var(--yellow-soft);
+  color: var(--yellow);
+}
+
+.badge.bad {
+  background: var(--red-soft);
+  color: var(--red);
+}
+
+.summary {
+  margin: 10px 0 12px;
+}
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 10px 12px;
+  margin-bottom: 10px;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.site {
+  font-weight: 600;
+}
+
+.state {
+  font-size: 13px;
+}
+
+.muted {
+  color: var(--muted);
+  font-size: 13px;
+  margin: 4px 0 0;
+}
+
+.label {
+  display: block;
+}
+
+.toggle {
+  cursor: pointer;
+}
+
+.toggle .muted {
+  display: block;
+}
+
+input[type='checkbox'] {
+  appearance: none;
+  flex: none;
+  width: 36px;
+  height: 20px;
+  border-radius: 999px;
+  background: var(--switch-off);
+  position: relative;
+  cursor: pointer;
+  margin: 0;
+}
+
+input[type='checkbox']::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #fff;
+  transition: transform 0.15s;
+}
+
+input[type='checkbox']:checked {
+  background: var(--accent);
+}
+
+input[type='checkbox']:checked::after {
+  transform: translateX(16px);
+  background: var(--surface);
+}
+
+input[type='checkbox']:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.help {
+  margin: 4px 0 0;
+}
+
+.versions {
+  margin-top: 4px;
+  font-size: 11px;
+}
