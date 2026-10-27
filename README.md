@@ -1,6 +1,6 @@
 # veil-chrome
 
-The browser extension of [Veil](https://getveil.tech). It keeps personal data and secrets out of what you type into **claude.ai** and **chatgpt.com**: before your message leaves the browser, Veil replaces values such as email addresses and phone numbers with placeholders like `[EMAIL_1]`, and shows the real values again in the reply, in reopened chats and in the sidebar. PDFs you attach are attached as their text, with the same values replaced.
+The browser extension of [Veil](https://getveil.tech). It keeps personal data and secrets out of what you type into **claude.ai** and **chatgpt.com**: before your message leaves the browser, Veil replaces values such as email addresses and phone numbers with placeholders like `[EMAIL_1]`, and shows the real values again in the reply, in reopened chats and in the sidebar. PDFs and text files you attach are attached as their text, with the same values replaced.
 
 It runs in Chrome, Edge, Brave and other Chromium browsers, and needs the Veil app on the same computer.
 
@@ -29,7 +29,7 @@ Each of these is checked by a test (`tests/guarantees.test.ts`, `e2e/mock.spec.t
 - **It only wraps the page's own requests.** `fetch` goes through Veil first. `XMLHttpRequest`, `WebSocket` and `EventSource` are wrapped only to report traffic while "Capture traffic" is on in the app. On chatgpt.com it also passes the chat data built into a reloaded page through Veil.
 - **It only touches the requests that can carry chat text** (`src/sites.ts`). Everything else goes to the site untouched, without reaching the app.
 - **It fails closed.** If the app can't be reached, messages are blocked and the page says why, unless you chose "send without protection" for that site in the popup.
-- **It only catches the files Veil reads.** Files you attach of a type Veil reads (PDF) go to the Veil app first; any other file goes to the site untouched.
+- **It only catches the files Veil reads.** Files you attach of a type Veil reads (PDF and text files) go to the Veil app first; any other file goes to the site untouched.
 - **It stores no text:** only how many values were replaced in each tab, and your preferences.
 - **Its permissions are only** native messaging and storage, on claude.ai and chatgpt.com.
 - **It isn't minified,** so you can read the code inside the zip you install.

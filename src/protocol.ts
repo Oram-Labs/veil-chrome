@@ -64,6 +64,12 @@ export interface DocFormat {
   /** Lower case, without the dot. */
   extensions: string[];
   mime_types: string[];
+  /**
+   * Refuse a page's upload of a file of this type that didn't go through
+   * Veil. Absent means true. False for text: pages make text and JSON files
+   * of their own, so only the files the user attaches go to Veil.
+   */
+  guard?: boolean;
 }
 
 export interface DocumentsView {

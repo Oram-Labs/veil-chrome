@@ -24,10 +24,12 @@ Asked when a page on claude.ai or chatgpt.com loads, and by the popup. The paylo
 { "version": "0.1.23", "running": true, "activated": true, "mode": "redact",
   "fail_closed": true, "sites": { "claude.ai": true, "chatgpt.com": true }, "capture": false,
   "documents": { "enabled": true, "max_mb": 25,
-    "formats": [{ "id": "pdf", "name": "PDF", "extensions": ["pdf"], "mime_types": ["application/pdf"] }] } }
+    "formats": [
+      { "id": "pdf", "name": "PDF", "extensions": ["pdf"], "mime_types": ["application/pdf"], "guard": true },
+      { "id": "text", "name": "Text", "extensions": ["txt", "md", "csv", "json", "env", "py", "…"], "mime_types": ["text/plain", "…"], "guard": false } ] } }
 ```
 
-`sites` says which sites Veil protects. `capture` is the app's "Capture traffic" setting (see `observe`). `documents` says which attached files to send to Veil (see `document`); until Veil answers, the extension treats PDFs as documents.
+`sites` says which sites Veil protects. `capture` is the app's "Capture traffic" setting (see `observe`). `documents` says which attached files to send to Veil (see `document`): by extension (a name that starts with a dot also counts its first part, so `.env.local` is an `env` file) or by media type. `guard` says whether the safety net below applies to that type; absent means true. Until Veil answers, the extension uses a built-in list of PDF and the common text types.
 
 ### `request`
 
@@ -77,13 +79,19 @@ A file the user is attaching on the site, of a type `status` lists in `documents
 { "action": "replace", "name": "contract (redacted).md", "mime": "text/markdown", "text": "…", "redacted": 5, "pages": 2 }
 ```
 
+A PDF comes back as Markdown; a text file keeps its extension (`data (redacted).csv`, or `.txt` for a name without one, such as `.env`), decoded to UTF-8 from whatever encoding it was in.
+
+```json
+{ "action": "replace", "name": "data (redacted).csv", "mime": "text/csv", "text": "…", "redacted": 2, "pages": 1 }
+```
+
 | `action` | What the extension does |
 |---|---|
 | `replace` | Gives the page a text file called `name`, holding `text`: the document's text with sensitive values replaced by placeholders |
 | `pass` | Gives the page the file as it is, for a file Veil can't read whose settings let it through; shows `message` |
 | `block` | Gives the page nothing; shows `message` |
 
-**If Veil can't be reached**, the file isn't attached, and the page says why, unless the user has turned on "send without protection" for that site. As a safety net, an upload whose body holds a document Veil hasn't seen is refused (`src/documents.ts`).
+**If Veil can't be reached**, the file isn't attached, and the page says why, unless the user has turned on "send without protection" for that site. As a safety net, an upload whose body holds a document of a guarded type (PDF) that Veil hasn't seen is refused (`src/documents.ts`). Text isn't guarded: pages make text and JSON files of their own, so only the text files the user attaches go to Veil.
 
 ### `page_data`
 

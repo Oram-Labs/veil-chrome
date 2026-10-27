@@ -14,13 +14,23 @@ import type { DocDecision, DocFormat, DocumentsView, Failure, Site } from './pro
 import { toBase64 } from './protocol';
 
 /**
- * Used only when Veil can't be asked, so documents are still caught (and
- * then blocked) while Veil is not running.
+ * Used until Veil has answered, and when it can't be asked, so documents
+ * are still caught (and then blocked) while Veil is not running. Veil's own
+ * list replaces it; the text types here are the common ones.
  */
 const FALLBACK: DocumentsView = {
   enabled: true,
   max_mb: 25,
-  formats: [{ id: 'pdf', name: 'PDF', extensions: ['pdf'], mime_types: ['application/pdf'] }],
+  formats: [
+    { id: 'pdf', name: 'PDF', extensions: ['pdf'], mime_types: ['application/pdf'] },
+    {
+      id: 'text',
+      name: 'Text',
+      extensions: ['txt', 'md', 'markdown', 'csv', 'tsv', 'json', 'jsonl', 'yaml', 'yml', 'toml', 'xml', 'html', 'log', 'sql', 'env', 'ini', 'conf', 'cfg', 'properties', 'js', 'ts', 'py', 'java', 'go', 'rs', 'rb', 'php', 'cs', 'c', 'cpp', 'h', 'sh'],
+      mime_types: ['text/plain', 'text/markdown', 'text/csv', 'application/json'],
+      guard: false,
+    },
+  ],
 };
 
 const MB = 1024 * 1024;
@@ -32,11 +42,25 @@ export interface Notices {
   blocked(message: string): void;
 }
 
-export function isDocument(file: Blob, view: DocumentsView): boolean {
+/**
+ * The type Veil lists that `file` is, by its extension or its media type.
+ * A name that starts with a dot also counts its first part, so `.env.local`
+ * is an `env` file.
+ */
+export function formatOf(file: Blob, view: DocumentsView): DocFormat | undefined {
   const name = file instanceof File ? file.name.toLowerCase() : '';
-  const ext = name.includes('.') ? name.slice(name.lastIndexOf('.') + 1) : '';
+  const exts: string[] = [];
+  const dot = name.lastIndexOf('.');
+  if (dot > 0 && dot < name.length - 1) exts.push(name.slice(dot + 1));
+  if (name.startsWith('.')) exts.push(name.slice(1).split('.')[0]);
   const type = file.type.toLowerCase();
-  return view.formats.some((f: DocFormat) => (ext && f.extensions.includes(ext)) || (type && f.mime_types.includes(type)));
+  return view.formats.find(
+    (f: DocFormat) => exts.some((e) => e && f.extensions.includes(e)) || (type && f.mime_types.includes(type)),
+  );
+}
+
+export function isDocument(file: Blob, view: DocumentsView): boolean {
+  return formatOf(file, view) !== undefined;
 }
 
 export function documentFailure(error: Failure, name: string): string {
@@ -215,7 +239,9 @@ export class Documents {
         }
         continue;
       }
-      if (!this.cleared.has(f) && isDocument(f, view)) return f instanceof File ? f.name : 'a document';
+      if (this.cleared.has(f)) continue;
+      const format = formatOf(f, view);
+      if (format && format.guard !== false) return f instanceof File ? f.name : 'a document';
     }
     return null;
   }

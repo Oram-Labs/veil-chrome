@@ -9,6 +9,14 @@ const VIEW: DocumentsView = {
   formats: [{ id: 'pdf', name: 'PDF', extensions: ['pdf'], mime_types: ['application/pdf'] }],
 };
 
+const TEXT = {
+  id: 'text',
+  name: 'Text',
+  extensions: ['txt', 'csv', 'json', 'env'],
+  mime_types: ['text/plain', 'application/json'],
+  guard: false,
+};
+
 interface Asked {
   op: Op;
   payload: Record<string, unknown>;
@@ -48,6 +56,15 @@ describe('isDocument', () => {
     expect(isDocument(new File(['x'], 'noext', { type: 'application/pdf' }), VIEW)).toBe(true);
     expect(isDocument(new File(['x'], 'photo.png', { type: 'image/png' }), VIEW)).toBe(false);
     expect(isDocument(new Blob(['x'], { type: 'application/pdf' }), VIEW)).toBe(true);
+  });
+
+  it('reads dotfile names by their first part', () => {
+    const view = { ...VIEW, formats: [...VIEW.formats, TEXT] };
+    expect(isDocument(new File(['K=v'], '.env'), view)).toBe(true);
+    expect(isDocument(new File(['K=v'], '.env.local'), view)).toBe(true);
+    expect(isDocument(new File(['x'], 'notes.TXT'), view)).toBe(true);
+    expect(isDocument(new Blob(['{}'], { type: 'application/json' }), view)).toBe(true);
+    expect(isDocument(new File(['x'], '.gitkeep'), view)).toBe(false);
   });
 
   it('knows new types from Veil alone', () => {
@@ -142,6 +159,45 @@ describe('Documents', () => {
     const open = guardFetch(inner as typeof fetch, docs, notices, async () => true);
     await open('/upload', { method: 'POST', body: form });
     expect(inner).toHaveBeenCalledTimes(3);
+  });
+
+  it('catches text files before Veil has said which types it reads', () => {
+    const channel: Channel = {
+      ask: () => new Promise(() => {}),
+      allowUnprotected: async () => false,
+      blocked: () => {},
+      counted: () => {},
+    };
+    // Veil hasn't answered yet: the list of types never arrives.
+    const pending = new Documents('claude.ai', channel, { info() {}, blocked() {} }, new Promise(() => {}), () => '/new');
+    expect(pending.wants([new File(['K=v'], '.env')])).toBe(true);
+    expect(pending.wants([new File(['a,b'], 'data.csv', { type: 'text/csv' })])).toBe(true);
+    expect(pending.wants([new File(['png'], 'photo.png', { type: 'image/png' })])).toBe(false);
+  });
+
+  it('lets a page upload its own text files: only PDFs are guarded', async () => {
+    const view = { ...VIEW, formats: [...VIEW.formats, TEXT] };
+    const { docs, notices, blocked } = setup(() => replace(), { view });
+    await docs.transform([]); // loads the view
+    const inner = vi.fn(async () => new Response('ok'));
+    const f = guardFetch(inner as typeof fetch, docs, notices, async () => false);
+    const form = new FormData();
+    form.append('file', new File(['pasted words'], 'pasted.txt', { type: 'text/plain' }));
+    await f('/upload', { method: 'POST', body: form });
+    await f('/log', { method: 'POST', body: new Blob(['{"a":1}'], { type: 'application/json' }) });
+    expect(inner).toHaveBeenCalledTimes(2);
+    expect(blocked).toEqual([]);
+  });
+
+  it('sends a text file the user attaches to Veil', async () => {
+    const view = { ...VIEW, formats: [...VIEW.formats, TEXT] };
+    const { docs, asked } = setup(
+      () => ({ ok: true, result: { action: 'replace', name: 'data (redacted).csv', mime: 'text/csv', text: 'a,b', redacted: 1, pages: 1 } }),
+      { view },
+    );
+    const out = await docs.transform([new File(['a,b'], 'data.csv', { type: 'text/csv' })]);
+    expect(asked.map((a) => a.op)).toContain('document');
+    expect(out.map((f) => [f.name, f.type])).toEqual([['data (redacted).csv', 'text/csv']]);
   });
 
   it('asks Veil for its types again if it wasn\'t running at page load', async () => {
