@@ -22,7 +22,7 @@
     "vitest": "^3"
   },
   "dependencies": {
-    "veil-engine": "file:../veil-engine/target/npm/veil-engine-0.2.1.tgz",
-    "veil-ui": "file:../veil-ui/veil-ui-0.1.3.tgz"
+    "veil-engine": "file:vendor/veil-engine-0.2.1.tgz",
+    "veil-ui": "file:vendor/veil-ui-0.1.3.tgz"
   }
 }
