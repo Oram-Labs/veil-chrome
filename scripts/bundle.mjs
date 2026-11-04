@@ -5,10 +5,23 @@
 // Content scripts can't load modules, so each entry is bundled on its own.
 
 import { cpSync, mkdirSync, rmSync } from 'node:fs';
-import { join } from 'node:path';
+import { createRequire } from 'node:module';
+import { dirname, join } from 'node:path';
 import { build } from 'esbuild';
+import sveltePlugin from 'esbuild-svelte';
+
+/**
+ * The folder of the `veil-engine` package (the engine as WebAssembly). Tests
+ * that need a build accepting the test license point VEIL_ENGINE_DIR at the
+ * package built with `--dev-license`; a release always uses the installed one.
+ */
+function enginePackage(root) {
+  if (process.env.VEIL_ENGINE_DIR) return process.env.VEIL_ENGINE_DIR;
+  return dirname(createRequire(join(root, 'package.json')).resolve('veil-engine/package.json'));
+}
 
 export async function bundle(root, out, logLevel = 'info') {
+  const engine = enginePackage(root);
   rmSync(out, { recursive: true, force: true });
   mkdirSync(out, { recursive: true });
   await build({
@@ -18,6 +31,7 @@ export async function bundle(root, out, logLevel = 'info') {
       bridge: 'src/bridge.ts',
       background: 'src/background.ts',
       popup: 'src/popup/popup.ts',
+      options: 'src/options/main.ts',
     },
     outdir: out,
     bundle: true,
@@ -27,7 +41,13 @@ export async function bundle(root, out, logLevel = 'info') {
     minify: false,
     sourcemap: false,
     legalComments: 'none',
+    // The screens shared with the Veil app (veil-ui) are Svelte components.
+    plugins: [sveltePlugin({ compilerOptions: { css: 'external' } })],
+    conditions: ['svelte', 'browser'],
+    mainFields: ['svelte', 'browser', 'module', 'main'],
+    alias: { 'veil-engine': engine },
     logLevel,
   });
   cpSync(join(root, 'static'), out, { recursive: true });
+  cpSync(join(engine, 'veil_engine_wasm_bg.wasm'), join(out, 'veil_engine_wasm_bg.wasm'));
 }

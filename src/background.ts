@@ -1,32 +1,108 @@
-// Service worker: relays the pages' questions to Veil over native messaging,
-// and keeps the count of values hidden in each tab for the toolbar badge.
+// Service worker: relays the pages' questions to Veil, and keeps the count of
+// values hidden in each tab for the toolbar badge.
+//
+// Veil is the app, over native messaging, whenever it can be reached. When it
+// can't, and the person has set up the built-in engine (a license key in the
+// extension's settings), the built-in engine answers (router.ts).
 
+import { LocalEngine, type Store } from './local/engine';
+import { BrowserVault } from './local/vault';
 import { NativeLink, type PortLike } from './native';
 import { HOST_NAME, type Ask, type StatusAsk } from './protocol';
+import { makeRouter, type Engine, type Pins } from './router';
 
-const link = new NativeLink(
+const app = new NativeLink(
   () => chrome.runtime.connectNative(HOST_NAME) as unknown as PortLike,
   () => chrome.runtime.lastError?.message,
 );
 
+const store: Store = {
+  get: async (key) => (await chrome.storage.local.get(key))[key],
+  set: (key, value) => chrome.storage.local.set({ [key]: value }),
+  remove: (key) => chrome.storage.local.remove(key),
+};
+
+const engine = new LocalEngine({
+  wasm: async () => {
+    const wasm = await import('veil-engine');
+    await wasm.default({ module_or_path: chrome.runtime.getURL('veil_engine_wasm_bg.wasm') });
+    return wasm;
+  },
+  store,
+  vault: new BrowserVault(),
+  now: () => Date.now(),
+  // Any extension call resets the worker's idle timer.
+  keepAlive: () => void chrome.runtime.getPlatformInfo(),
+  version: chrome.runtime.getManifest().version,
+});
+
+/** Which engine each chat uses: the most recent few hundred, kept in the browser. */
+const MAX_PINS = 500;
+const pins: Pins = {
+  async get(key) {
+    const all = ((await chrome.storage.local.get('pins')).pins ?? {}) as Record<string, [Engine, number]>;
+    return all[key]?.[0];
+  },
+  async set(key, value) {
+    const all = ((await chrome.storage.local.get('pins')).pins ?? {}) as Record<string, [Engine, number]>;
+    all[key] = [value, Date.now()];
+    const keys = Object.keys(all);
+    if (keys.length > MAX_PINS) {
+      for (const old of keys.sort((a, b) => all[a]![1] - all[b]![1]).slice(0, keys.length - MAX_PINS)) delete all[old];
+    }
+    await chrome.storage.local.set({ pins: all });
+  },
+};
+
+const router = makeRouter(app, { ask: (op, payload) => engine.ask(op, payload), available: () => engine.available() }, pins);
+
+/** What the settings page asks of the built-in engine; see options/localBackend.ts. */
+const MANAGE: Record<string, (engine: LocalEngine, args: any[]) => Promise<unknown>> = {
+  status: (e) => e.status(),
+  config: (e) => e.config(),
+  patchConfig: (e, [patch]) => e.patchConfig(patch),
+  rules: (e) => e.rulesView(),
+  putRules: (e, [rules]) => e.putRules(rules),
+  testRules: (e, [req]) => e.testRules(req),
+  activity: (e) => e.activity(),
+  recentMatches: (e) => e.recentMatches(),
+  clearVault: (e) => e.clearVault(),
+  setRunning: (e, [running]) => e.setRunning(running),
+  license: (e) => e.licenseView(),
+  setLicense: (e, [key]) => e.setLicense(key),
+  removeLicense: (e) => e.removeLicense(),
+  enabled: (e) => e.enabled(),
+  setEnabled: (e, [on]) => e.setEnabled(on),
+  deleteEverything: (e) => e.deleteEverything(),
+};
+
+const OPS = new Set(['status', 'request', 'response', 'observe', 'page_data', 'document', 'open']);
+
 chrome.runtime.onMessage.addListener((msg: Ask, sender, sendResponse) => {
-  if (
-    msg.op === 'status' ||
-    msg.op === 'request' ||
-    msg.op === 'response' ||
-    msg.op === 'observe' ||
-    msg.op === 'page_data' ||
-    msg.op === 'document' ||
-    msg.op === 'open'
-  ) {
-    // Only our own content scripts and popup can send these.
-    if (sender.id !== chrome.runtime.id) return false;
+  // Only our own content scripts, popup and settings page can send these.
+  if (sender.id !== chrome.runtime.id) return false;
+  if (OPS.has(msg.op)) {
     // Opening the app is the popup's button; the sites' pages have no say.
     if (msg.op === 'open' && sender.tab !== undefined) return false;
     // Status checks say which version of the extension asks; the Veil app
     // shows it on its General screen.
     const payload = msg.op === 'status' ? ({ extension: chrome.runtime.getManifest().version } satisfies StatusAsk) : msg.payload;
-    link.ask(msg.op, payload).then(sendResponse);
+    router.route(msg.op, payload, { tabUrl: sender.tab?.url, tabId: sender.tab?.id }).then(sendResponse);
+    return true;
+  }
+  if ((msg.op as string) === 'local') {
+    // The settings page only; a site's page never reaches the engine's settings.
+    if (!sender.url?.startsWith(chrome.runtime.getURL('options.html'))) return false;
+    const { method, args } = msg.payload as { method: string; args?: unknown[] };
+    const call = MANAGE[method];
+    if (!call) {
+      sendResponse({ ok: false, error: 'unknown_method' });
+      return false;
+    }
+    call(engine, args ?? []).then(
+      (result) => sendResponse({ ok: true, result }),
+      (e: unknown) => sendResponse({ ok: false, error: e instanceof Error ? e.message : String(e) }),
+    );
     return true;
   }
   if ((msg.op as string) === 'count' && sender.tab?.id !== undefined) {

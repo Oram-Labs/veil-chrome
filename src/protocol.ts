@@ -58,6 +58,8 @@ export interface VeilStatus {
   capture?: boolean;
   /** Which attached files to send to Veil. Absent from older versions. */
   documents?: DocumentsView;
+  /** `builtin` when the extension's own engine answered, because the Veil app isn't running. */
+  engine?: 'builtin';
 }
 
 /** A type of document Veil reads. */

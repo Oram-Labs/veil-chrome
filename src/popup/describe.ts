@@ -12,6 +12,8 @@ export interface View {
   help: string;
   /** A button under the summary: download the app, or open it. */
   action?: { kind: 'download'; label: string; href: string } | { kind: 'open'; label: string };
+  /** A second button: the extension's own settings, where its built-in engine is set up. */
+  settings?: string;
 }
 
 export function describe(status: Answer<VeilStatus>, site: Site | null, count: number, unprotected: boolean): View {
@@ -20,6 +22,7 @@ export function describe(status: Answer<VeilStatus>, site: Site | null, count: n
   if (!status.ok) {
     const missing = status.error === 'no_host';
     return {
+      settings: 'Use the built-in engine instead',
       badge: missing ? 'Not installed' : 'Not running',
       tone: 'bad',
       summary: missing
@@ -28,7 +31,7 @@ export function describe(status: Answer<VeilStatus>, site: Site | null, count: n
       siteState: unprotected ? 'Sending unprotected' : 'Messages wait for Veil',
       count: count_text,
       help: missing
-        ? 'Install the Veil app and open it once. Then reload this page.'
+        ? 'Install the Veil app and open it once, then reload this page. Or enter your license key in the extension\'s settings to use its built-in engine, without the app.'
         : unprotected
           ? 'Open the Veil app. Until then, messages on this site are sent unprotected.'
           : 'Open the Veil app. Until then, messages on this site are blocked, not sent unprotected.',
@@ -39,6 +42,7 @@ export function describe(status: Answer<VeilStatus>, site: Site | null, count: n
   }
   const s = status.result;
   const siteOn = site ? s.sites[site] : false;
+  const builtIn = s.engine === 'builtin';
   if (!s.running) {
     return {
       badge: 'Paused',
@@ -76,7 +80,12 @@ export function describe(status: Answer<VeilStatus>, site: Site | null, count: n
           : 'Veil is turned off. Messages are sent unchanged.',
     siteState: siteOn ? mode.state : 'Off in Veil',
     count: count_text,
-    help: site ? `Veil ${s.version}. Choose protected sites in Veil, under Client setup.` : 'Open claude.ai or chatgpt.com to see this site.',
+    help: builtIn
+      ? "Using the extension's built-in engine, because the Veil app isn't running. It reads text files, not PDFs, and doesn't detect names. Open the extension's settings to change what it does."
+      : site
+        ? `Veil ${s.version}. Choose protected sites in Veil, under Client setup.`
+        : 'Open claude.ai or chatgpt.com to see this site.',
+    ...(builtIn ? { settings: 'Settings' } : {}),
   };
 }
 

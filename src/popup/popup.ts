@@ -22,7 +22,17 @@ async function main(): Promise<void> {
   $('summary').textContent = view.summary;
   $('help').textContent = view.help;
   const mine = chrome.runtime.getManifest().version;
-  $('versions').textContent = status.ok ? `Extension ${mine} · Veil app ${status.result.version}` : `Extension ${mine}`;
+  $('versions').textContent = status.ok
+    ? status.result.engine === 'builtin'
+      ? `Extension ${mine} · Built-in engine`
+      : `Extension ${mine} · Veil app ${status.result.version}`
+    : `Extension ${mine}`;
+  if (view.settings) {
+    const settings = $<HTMLButtonElement>('settings');
+    settings.textContent = view.settings;
+    settings.hidden = false;
+    settings.addEventListener('click', () => void chrome.runtime.openOptionsPage());
+  }
   if (view.action) showAction(view.action);
   if (site) {
     $('site').hidden = false;

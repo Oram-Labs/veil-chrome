@@ -48,7 +48,10 @@ describe('permissions', () => {
   });
 
   it('let no web page or other extension talk to it, and load no remote code', () => {
-    for (const key of ['externally_connectable', 'web_accessible_resources', 'optional_permissions', 'optional_host_permissions', 'content_security_policy']) {
+    // The one policy allows the engine's WebAssembly, and nothing else beyond the default.
+    expect(manifest.content_security_policy).toEqual({ extension_pages: "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'" });
+    expect(manifest.options_ui).toEqual({ page: 'options.html', open_in_tab: true });
+    for (const key of ['externally_connectable', 'web_accessible_resources', 'optional_permissions', 'optional_host_permissions']) {
       expect(manifest[key], key).toBeUndefined();
     }
     expect(manifest.background).toEqual({ service_worker: 'background.js' });
@@ -97,12 +100,40 @@ describe('the page', () => {
 });
 
 describe('storage', () => {
-  it('holds counts, preferences and the latest version numbers, never text', () => {
+  it('holds counts, preferences, the latest version numbers and the built-in engine\'s own data, never chat text', () => {
     expect(found(/chrome\.storage\.\w+\.(set|remove)\([^)]*\)/g)).toEqual([
+      // The built-in engine's store: `store.set(key, value)` below says which keys.
+      'background.ts: chrome.storage.local.remove(key)',
+      'background.ts: chrome.storage.local.set({ [key]: value })',
+      // Which engine each chat used, by the chat's id.
+      'background.ts: chrome.storage.local.set({ pins: all })',
       'background.ts: chrome.storage.session.remove(`count:${tab}`)',
       'background.ts: chrome.storage.session.set({ [key]: total })',
       'popup/popup.ts: chrome.storage.local.set({ prefs: next })',
       'popup/update.ts: chrome.storage.local.set({ latest: { at: now, data: parseLatest(data)',
+    ]);
+  });
+
+  it('keeps for the built-in engine only its license key, settings, rules, activity counts, on/off choice and pause', () => {
+    expect(found(/store\.(set|remove)\(\s*[A-Z_a-z']+/g)).toEqual([
+      "local/engine.ts: store.remove('paused'",
+      "local/engine.ts: store.set('paused'",
+      'local/engine.ts: store.remove(key',
+      'local/engine.ts: store.remove(LICENSE',
+      'local/engine.ts: store.set(ACTIVITY',
+      'local/engine.ts: store.set(CONFIG',
+      'local/engine.ts: store.set(LICENSE',
+      'local/engine.ts: store.set(LOCAL',
+      'local/engine.ts: store.set(RULES',
+    ].sort());
+  });
+
+  it('keeps the values behind placeholders only encrypted, in IndexedDB', () => {
+    expect(found(/\b(localStorage|sessionStorage)\b/g)).toEqual([]);
+    expect(found(/indexedDB|IDBFactory/g)).toEqual(['local/vault.ts: IDBFactory', 'local/vault.ts: indexedDB']);
+    // The key is made not extractable: no script can read its bytes.
+    expect(found(/crypto\.subtle\.generateKey\([^)]*\)\)?/g)).toEqual([
+      "local/vault.ts: crypto.subtle.generateKey({ name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt'])",
     ]);
   });
 });
