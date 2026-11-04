@@ -8,8 +8,8 @@
 import { LocalEngine, type Store } from './local/engine';
 import { BrowserVault } from './local/vault';
 import { NativeLink, type PortLike } from './native';
-import { HOST_NAME, type Ask, type StatusAsk } from './protocol';
-import { makeRouter, type Engine, type Pins } from './router';
+import { HOST_NAME, type Answer, type Ask, type StatusAsk } from './protocol';
+import { makeRouter, type Engine, type Pins, type Router } from './router';
 
 const app = new NativeLink(
   () => chrome.runtime.connectNative(HOST_NAME) as unknown as PortLike,
@@ -54,7 +54,31 @@ const pins: Pins = {
   },
 };
 
-const router = makeRouter(app, { ask: (op, payload) => engine.ask(op, payload), available: () => engine.available() }, pins);
+const inner = makeRouter(app, { ask: (op, payload) => engine.ask(op, payload), available: () => engine.available() }, pins);
+
+/**
+ * While the Veil app answers and is activated, and no key is saved, asks it
+ * for its license key and keeps it, so the built-in engine can work later
+ * without the app. At most once a minute.
+ */
+let lastKeyAsk = 0;
+async function syncLicense(answer: Answer): Promise<void> {
+  if (!answer.ok) return;
+  const status = answer.result as { activated?: boolean; engine?: string };
+  if (!status.activated || status.engine === 'builtin' || Date.now() - lastKeyAsk < 60_000) return;
+  if ((await store.get('license')) !== undefined) return;
+  lastKeyAsk = Date.now();
+  const key = await app.ask<{ key?: string }>('license');
+  if (key.ok && typeof key.result.key === 'string') await engine.setLicense(key.result.key).catch(() => undefined);
+}
+
+const router: Router = {
+  async route(op, payload, ctx) {
+    const answer = await inner.route(op, payload, ctx);
+    if (op === 'status') void syncLicense(answer);
+    return answer;
+  },
+};
 
 /** What the settings page asks of the built-in engine; see options/localBackend.ts. */
 const MANAGE: Record<string, (engine: LocalEngine, args: any[]) => Promise<unknown>> = {

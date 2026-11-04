@@ -11,6 +11,7 @@
 // and files in that folder, which a test can create or remove at any time:
 //   stopped         answer every message as the host does when Veil isn't
 //                   running ({"ok": false, "error": "not_running"})
+//   license.key     the license key `license` answers with, if the file is there
 //   log.jsonl       written by the host: one line per message it received
 
 import { appendFileSync, existsSync, readFileSync, writeFileSync } from 'node:fs';
@@ -95,6 +96,8 @@ function answer(message) {
   switch (op) {
     case 'ping':
       return ok({ host: 'mock' });
+    case 'license':
+      return ok(existsSync(join(dir, 'license.key')) ? { key: readFileSync(join(dir, 'license.key'), 'utf8').trim() } : {});
     case 'status':
       return ok({
         version: 'mock',

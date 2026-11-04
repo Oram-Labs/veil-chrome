@@ -1,10 +1,10 @@
 # Threat model: veil-chrome
 
-Oct 2026. The extension's own risks. The redaction it relies on is covered by [veil-engine's threat model](https://github.com/Oram-Labs/veil-engine/blob/main/THREAT_MODEL.md); the Veil app is not open source.
+Nov 2026. The extension's own risks, with the Veil app and with its built-in engine. The redaction it relies on is covered by [veil-engine's threat model](https://github.com/Oram-Labs/veil-engine/blob/main/THREAT_MODEL.md); the Veil app is not open source.
 
 ## What it protects against
 
-**Sending detected values to claude.ai or chatgpt.com by accident**, when you type into those sites in the browser. The extension makes sure what the page sends goes through the Veil app first, which replaces the values it detects with placeholders, and that replies come back through the app to be restored. Like the engine, it's a safety net for mistakes, not a guarantee that nothing sensitive is sent.
+**Sending detected values to claude.ai or chatgpt.com by accident**, when you type into those sites in the browser. The extension makes sure what the page sends goes through the Veil app first (or, without the app, through its built-in engine), which replaces the values it detects with placeholders, and that replies come back through the same engine to be restored. Like the engine, it's a safety net for mistakes, not a guarantee that nothing sensitive is sent.
 
 ## Who and what is trusted
 
@@ -12,6 +12,7 @@ Oct 2026. The extension's own risks. The redaction it relies on is covered by [v
 |---|---|---|
 | You, your computer and your browser profile | Yes | An attacker who controls them can read what you type before the extension sees it. |
 | The Veil app | Yes | It receives every chat request and reply on the two sites, in plain form ([PROTOCOL.md](PROTOCOL.md)). |
+| The built-in engine | Yes | It is part of the extension: code you can read in this repository and in [veil-engine](https://github.com/Oram-Labs/veil-engine), run as WebAssembly in the extension's service worker. It makes no network requests. |
 | claude.ai and chatgpt.com | No | This is who the values are kept from. |
 | Other websites and other extensions | No | The extension accepts no messages from them (`externally_connectable` is not set). |
 
@@ -19,7 +20,7 @@ Oct 2026. The extension's own risks. The redaction it relies on is covered by [v
 
 - **It sees** every request and reply on claude.ai and chatgpt.com that can carry chat text (`src/sites.ts`), and the chat data built into chatgpt.com pages on a reload.
 - **It sends them only to the Veil app**, through the native messaging host `com.veil.app.native`. Its one connection of its own is the popup's GET of `https://getveil.tech/download/latest.json`, without cookies and with nothing about you in it, to say when a newer version is out; it's the only server address in its code (`tests/guarantees.test.ts`).
-- **It stores** only the number of values replaced in each tab (until the tab closes) and your preferences. No text.
+- **It stores** the number of values replaced in each tab (until the tab closes), your preferences, and which engine each chat used (by the chat's id, the most recent 500). For the built-in engine it also keeps its settings, rules, license key and activity counts (kinds and counts, no values), and the values behind its placeholders, encrypted (below). No chat text.
 - **With "Capture traffic" on in the app**, a debugging setting, the extension also reports what the chat page does, with request and reply bodies, to the app, which writes them to its capture folder on your computer. These hold real values and stay on the computer. Nothing is reported while it's off.
 
 ## Risks, and what limits them
@@ -27,6 +28,20 @@ Oct 2026. The extension's own risks. The redaction it relies on is covered by [v
 ### The app isn't running
 
 Requests that send text are blocked, and the page says why. Loading chats still works, showing placeholders. **Limit:** you can choose "send without protection" for a site in the popup, which then lets messages through unredacted while the app is unreachable. The popup shows when that is on.
+
+### The built-in engine's vault
+
+Without the app, the values behind placeholders ("ana@example.com is `[EMAIL_1]` in this chat") are kept in the browser, so a chat can be restored after the browser restarts. Each is encrypted with AES-GCM under a key the browser made on first use and keeps as a non-extractable key in IndexedDB, with the entry's name bound in as associated data. No passphrase is asked.
+
+**Protects against:** someone who copies the browser profile's files (a backup, a stolen disk image that is read without the user's session, a script that reads IndexedDB's files) and doesn't also use the browser as you: the values aren't in the files in the clear, and the key can't be read out of the browser's API.
+
+**Doesn't protect against:** anyone or anything that can run as this extension or as you in this browser profile: it can ask the browser to decrypt, and so can any program that can use your unlocked session. The key lives beside the data it protects, so this is encryption at rest in the browser's storage, not a vault with its own secret. Values that are no longer needed are forgotten after the retention period (7 days since last use by default) and when you choose **Delete everything** in the extension's settings, which also removes the key.
+
+**Limit:** the extension keeps only what the engine reports: a placeholder's value, its kind and number, the conversation it belongs to (a keyed hash, not the chat's id), and when it was last used.
+
+### Two engines, one chat
+
+A placeholder means a value only to the engine that made it. If a chat were started with one engine and continued with the other, `[EMAIL_1]` could stand for a different address, and a reply would be restored to the wrong value. So a chat stays with the engine that started it, and when that engine isn't available the message is blocked rather than sent through the other. **Limit:** the chat is recognised by its address; a new chat is attributed to its tab for ten minutes until its address names it. A chat opened from another browser profile or after the stored record was dropped (the record keeps the last 500) goes to the app first.
 
 ### The site changes
 
@@ -51,6 +66,7 @@ On a chatgpt.com reload, values are restored inside chat data that the page then
 - Other extensions with permission to read claude.ai or chatgpt.com: they can read the page, as they could without Veil.
 - What the sites do with the redacted text.
 - The Veil app's own handling of what it receives, beyond [PROTOCOL.md](PROTOCOL.md).
+- A license key's secrecy: the extension checks keys offline and keeps the one you enter; a copied key works anywhere, as it does in the app.
 
 ## Reporting a vulnerability
 

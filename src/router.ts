@@ -177,6 +177,7 @@ export function makeRouter(app: Link, local: LocalLink, pins: Pins, now: () => n
           return appUnreachable(answer) ? { ok: true, result: { written: false } } : answer;
         }
         case 'open':
+        case 'license':
           return app.ask(op, payload);
       }
     },

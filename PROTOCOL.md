@@ -1,6 +1,6 @@
 # Protocol: what the extension sends to the Veil app
 
-The extension talks to one program only: the native messaging host `com.veil.app.native`, which the Veil app installs. Chrome starts the host and connects the extension to it over the host's standard input and output. The extension's only network request of its own is the popup's GET of `https://getveil.tech/download/latest.json`, at most every 6 hours, to say when a newer version is out (`src/popup/update.ts`); it sends nothing about the user.
+The extension talks to one program only: the native messaging host `com.veil.app.native`, which the Veil app installs. When that program can't be reached, the extension's built-in engine answers the same operations itself (see "The built-in engine" below); nothing is sent anywhere for it. Chrome starts the host and connects the extension to it over the host's standard input and output. The extension's only network request of its own is the popup's GET of `https://getveil.tech/download/latest.json`, at most every 6 hours, to say when a newer version is out (`src/popup/update.ts`); it sends nothing about the user.
 
 This document is what that program receives. The Veil app's implementation is not open source; `e2e/mock-host.mjs` is a small stand-in that answers the same messages, for the tests.
 
@@ -117,6 +117,19 @@ The app writes each report to its capture folder on the computer. These reports 
 
 Sent only by the popup's **Open Veil** button, when the app is installed but not running. The host, which is the app's own program started by Chrome, opens the app (on macOS through Launch Services) and answers `{"started": true}`, or `{"started": false}` if Veil was already running. The extension doesn't accept it from pages. Apps before 0.1.28 answer `unknown_op`, and the popup then says to open Veil from Applications or the Start menu.
 
+### `license`
+
+Sent only by the extension's service worker, never by a page, while the app answers `status` with `activated: true` and the extension has no license key of its own saved, at most once a minute. The app answers the key in use, `{"key": "VEIL1.…"}`, or `{}` when it isn't activated. The extension keeps the key so its built-in engine can work later without the app. Apps before this operation answer `unknown_op`, and the extension goes on without a key.
+
 ### `ping`
 
 The host also answers `ping` with `{"host": "<the app's version>"}`, without asking the app. The extension doesn't send it today.
+
+## The built-in engine
+
+Without the app, the extension answers `status`, `request`, `response`, `document`, `page_data` and `observe` itself, with the same shapes as above, from an engine in its service worker (the open-source veil-engine and the sites' handling, compiled to WebAssembly):
+
+- `status` adds `"engine": "builtin"` and lists a PDF type so PDFs are caught; a PDF is then handled as `behavior.unsupported_content` says, because the built-in engine can't read PDFs. It reports `capture: false`.
+- Reply tickets are marked `local:` so the reply's chunks come back to the engine that made them.
+- `observe` answers `{"written": false}` and `open` isn't answered.
+- A message in a chat that the app started is blocked, with a message saying so, while the app can't be reached, and the other way round. Which engine a chat used is kept by the chat's id.
