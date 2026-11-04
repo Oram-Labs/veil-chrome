@@ -109,6 +109,22 @@ test('without the app, the built-in engine protects at once, and the popup says 
   await popup.close();
 });
 
+test('the dashboard says what the Veil app adds, and the card can be hidden', async () => {
+  const page = await options('dashboard');
+  const card = page.getByRole('region', { name: 'Get more out of Veil with the app' });
+  await expect(card).toBeVisible();
+  await expect(card.getByText('Attached documents')).toBeVisible();
+  await expect(card.getByRole('link', { name: 'Get the Veil app' })).toHaveAttribute('href', 'https://getveil.tech/#download');
+  await card.getByRole('button', { name: 'Hide for 30 days' }).click();
+  await expect(card).toHaveCount(0);
+  await page.reload();
+  await expect(page.getByRole('heading', { name: 'Today' })).toBeVisible();
+  await expect(page.getByRole('region', { name: 'Get more out of Veil with the app' })).toHaveCount(0);
+  // Shown again for the tests below.
+  await page.evaluate(() => chrome.storage.local.remove('upsell'));
+  await page.close();
+});
+
 for (const site of ['chatgpt.com', 'claude.ai']) {
   test(`${site}: the site gets placeholders and the page shows real values`, async () => {
     const page = await context.newPage();
@@ -277,4 +293,13 @@ test('with the built-in engine turned off, sending waits for the app', async () 
   await send(site, `write to ${EMAIL}`);
   await expect(site.locator('#status')).toHaveText('status 403', { timeout: 15_000 });
   await site.close();
+});
+
+test('with the app installed but not running, the card offers to open it', async () => {
+  // The stand-in app is installed and stopped since the test of chats and engines.
+  const page = await options('dashboard');
+  const card = page.getByRole('region', { name: 'Get more out of Veil with the app' });
+  await expect(card.getByRole('button', { name: 'Open Veil' })).toBeVisible();
+  await expect(card.getByRole('link', { name: 'Get the Veil app' })).toHaveCount(0);
+  await page.close();
 });

@@ -31,6 +31,8 @@
   let route = $state<ScreenName>('dashboard');
   /** The Veil app answered: its settings are the ones that count. */
   let appRunning = $state<boolean | null>(null);
+  /** Why the app didn't answer: not installed, or installed and not running. */
+  let appMissing = $state(true);
   let opening = $state(false);
   let note = $state('');
 
@@ -42,6 +44,8 @@
   async function check() {
     const answer = await chrome.runtime.sendMessage({ op: 'status' });
     appRunning = answer?.ok === true && answer.result?.engine !== 'builtin';
+    // With the built-in engine on, its status says why the app didn't answer; with it off, the failure does.
+    appMissing = (answer?.ok ? answer.result?.app : answer?.error) === 'no_host';
   }
 
   async function openApp() {
@@ -96,7 +100,7 @@
     </nav>
     <main>
       <div class="content">
-        {#if route === 'dashboard'}<Dashboard />
+        {#if route === 'dashboard'}<Dashboard {appMissing} />
         {:else if route === 'rules'}<RulesScreen />
         {:else if route === 'behavior'}<BehaviorScreen />
         {:else if route === 'playground'}<PlaygroundScreen />

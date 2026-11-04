@@ -10,16 +10,17 @@ import { describe, expect, it } from 'vitest';
 const root = join(__dirname, '..');
 const manifest = JSON.parse(readFileSync(join(root, 'static/manifest.json'), 'utf8'));
 
-/** Every source file, as `[path relative to src, text without comments]`. */
+/** Every source file (TypeScript and Svelte), as `[path relative to src, text without comments]`. */
 function sources(): [string, string][] {
   const out: [string, string][] = [];
   const walk = (dir: string) => {
     for (const name of readdirSync(dir)) {
       const path = join(dir, name);
       if (statSync(path).isDirectory()) walk(path);
-      else if (path.endsWith('.ts')) {
+      else if (path.endsWith('.ts') || path.endsWith('.svelte')) {
         const text = readFileSync(path, 'utf8')
           .replace(/\/\*[\s\S]*?\*\//g, '')
+          .replace(/<!--[\s\S]*?-->/g, '')
           .replace(/(^|[^:])\/\/.*$/gm, '$1');
         out.push([relative(join(root, 'src'), path), text]);
       }
@@ -109,6 +110,8 @@ describe('storage', () => {
       'background.ts: chrome.storage.session.set({ [key]: total })',
       // Which engine each chat used, by the chat's id, for the session.
       'background.ts: chrome.storage.session.set({ pins: all })',
+      // When the settings page's card about the Veil app was hidden until.
+      'options/Upsell.svelte: chrome.storage.local.set({ upsell: { hiddenUntil: Date.now()',
       'popup/popup.ts: chrome.storage.local.set({ prefs: next })',
       'popup/update.ts: chrome.storage.local.set({ latest: { at: now, data: parseLatest(data)',
     ]);
