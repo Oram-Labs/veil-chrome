@@ -177,7 +177,16 @@ input[type='checkbox']:focus-visible {
 }
 
 .action {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
   margin: -2px 0 12px;
+}
+
+.button.secondary {
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--line);
 }
 
 .button {
@@ -205,7 +214,8 @@ input[type='checkbox']:focus-visible {
 }
 
 .action .muted {
-  margin-top: 8px;
+  flex-basis: 100%;
+  margin: 0;
 }
 
 .update {

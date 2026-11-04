@@ -2,7 +2,7 @@
 
 The browser extension of [Veil](https://getveil.tech). It keeps personal data and secrets out of what you type into **claude.ai** and **chatgpt.com**: before your message leaves the browser, Veil replaces values such as email addresses and phone numbers with placeholders like `[EMAIL_1]`, and shows the real values again in the reply, in reopened chats and in the sidebar. PDFs and text files you attach are attached as their text, with the same values replaced.
 
-It runs in Chrome, Edge, Brave and other Chromium browsers. With the [Veil app](https://getveil.tech) on the same computer, the app does the work. Without it, the extension has a built-in engine of its own, which needs a Veil license key.
+It runs in Chrome, Edge, Brave and other Chromium browsers. With the [Veil app](https://getveil.tech) on the same computer, the app does the work. Without it, the extension redacts with a free built-in engine of its own; attached files and names need the app.
 
 ```text
 you type           Write to ana@example.com
@@ -12,7 +12,7 @@ the reply shows    I wrote to ana@example.com.
 
 ## Two engines
 
-The extension catches what the page is about to send, and the chat data the page receives, and has it redacted and restored by one of two engines. It asks the **Veil app** first, through Chrome's native messaging. Only if the app can't be reached (not installed, not running) does the **built-in engine** answer, and only if you have saved a license key in the extension's settings.
+The extension catches what the page is about to send, and the chat data the page receives, and has it redacted and restored by one of two engines. It asks the **Veil app** first, through Chrome's native messaging. Only if the app can't be reached (not installed, not running) does the **built-in engine** answer, unless you turned it off in the extension's settings.
 
 ```text
 claude.ai or chatgpt.com page  ──►  veil-chrome ──native messaging──►  Veil app on your computer
@@ -21,7 +21,7 @@ claude.ai or chatgpt.com page  ──►  veil-chrome ──native messaging─�
 ```
 
 - **The Veil app** keeps the placeholders on your computer, reads PDFs and can detect names. [PROTOCOL.md](PROTOCOL.md) lists exactly what the extension sends to it.
-- **The built-in engine** is the open-source [veil-engine](https://github.com/Oram-Labs/veil-engine) and the code that knows which fields of each site's requests are chat text, compiled to WebAssembly and run inside the extension. It reads text files, not PDFs, and doesn't detect names. The values behind placeholders are kept encrypted in the browser; [THREAT_MODEL.md](THREAT_MODEL.md) says how, and what that does and doesn't protect against. Its settings are the app's own screens (the [veil-ui](https://github.com/Oram-Labs/veil-ui) package), in the extension's settings page.
+- **The built-in engine** is the open-source [veil-engine](https://github.com/Oram-Labs/veil-engine) and the code that knows which fields of each site's requests are chat text, compiled to WebAssembly and run inside the extension. It's free and needs no key. It finds what the engine's built-in detectors find (emails, phone numbers, cards, IBANs, API keys and tokens, IP addresses, URLs, national ID numbers) and your own terms and patterns. It doesn't read attached files or detect names: without the app, a file you attach is sent as it is with a notice, or held back if you choose Block in its settings. The values behind placeholders are kept encrypted in the browser; [THREAT_MODEL.md](THREAT_MODEL.md) says how, and what that does and doesn't protect against. Its settings are the app's own screens (the [veil-ui](https://github.com/Oram-Labs/veil-ui) package), in the extension's settings page.
 
 A chat stays with the engine that started it, because only that engine knows what its placeholders stand for. If that engine isn't there later, the message waits instead of going to the other one.
 
@@ -33,8 +33,8 @@ Each of these is checked by a test (`tests/guarantees.test.ts`, `e2e/mock.spec.t
 - **It only wraps the page's own requests.** `fetch` goes through Veil first. `XMLHttpRequest`, `WebSocket` and `EventSource` are wrapped only to report traffic while "Capture traffic" is on in the app. On chatgpt.com it also passes the chat data built into a reloaded page through Veil.
 - **It only touches the requests that can carry chat text** (`src/sites.ts`). Everything else goes to the site untouched, without reaching the app.
 - **It fails closed.** If neither the app nor the built-in engine can be used, messages are blocked and the page says why, unless you chose "send without protection" for that site in the popup.
-- **It only catches the files Veil reads.** Files you attach of a type Veil reads (PDF and text files) go to the Veil app first; any other file goes to the site untouched.
-- **It stores no chat text in the clear:** only how many values were replaced in each tab, your preferences, which engine each chat used and, for the built-in engine, its settings, rules, license key, activity counts and the values behind its placeholders, encrypted.
+- **It only catches the files Veil reads.** Files you attach of a type the Veil app reads (PDF and text files) go to the app first; any other file goes to the site untouched. The built-in engine never reads files.
+- **It stores no chat text in the clear:** only how many values were replaced in each tab, your preferences, which engine each chat used and, for the built-in engine, its settings, rules, activity counts and the values behind its placeholders, encrypted.
 - **Its permissions are only** native messaging and storage, on claude.ai and chatgpt.com. Its one content security policy allows the engine's WebAssembly (`'wasm-unsafe-eval'`) and nothing else beyond the default.
 - **It isn't minified,** so you can read the code inside the zip you install.
 
@@ -44,7 +44,7 @@ Each of these is checked by a test (`tests/guarantees.test.ts`, `e2e/mock.spec.t
 
 From the [Chrome Web Store](https://chromewebstore.google.com/detail/veil/lanejpecogmomcibpjcomddmkgpagneb), with the [Veil app](https://getveil.tech) installed and running. In Edge, allow extensions from other stores when it asks.
 
-The built-in engine needs a license key, entered in the extension's settings (the toolbar icon, then **Settings**). The Veil app shares its key with the extension when it is running, so the extension can use it later without the app.
+The built-in engine works as soon as the extension is installed. Its settings are in the extension's settings page (the toolbar icon, then **Settings**), where it can also be turned off.
 
 To try your own build: `pnpm build`, then in `chrome://extensions` turn on Developer mode, choose **Load unpacked** and pick `dist/unpacked`. The Veil app accepts both the Store's copy and unpacked builds.
 
@@ -76,7 +76,7 @@ pnpm zip          # dist/veil-extension-<version>.zip, and -store.zip without "k
 pnpm test:e2e     # Chromium with the extension, against local stand-ins
 ```
 
-The end-to-end tests run the extension in Chromium against local stand-ins for claude.ai and chatgpt.com, with `e2e/mock-host.mjs` standing in for the Veil app (`e2e/mock.spec.ts`), and with no app at all for the built-in engine (`e2e/local.spec.ts`, which builds the extension with an engine package that accepts the test license: `VEIL_ENGINE_DIR`, `VEIL_TEST_LICENSE`). Run `pnpm build` and `npx playwright install chromium` first.
+The end-to-end tests run the extension in Chromium against local stand-ins for claude.ai and chatgpt.com, with `e2e/mock-host.mjs` standing in for the Veil app (`e2e/mock.spec.ts`), and with no app at all for the built-in engine (`e2e/local.spec.ts`). Run `pnpm build` and `npx playwright install chromium` first.
 
 ## Security
 

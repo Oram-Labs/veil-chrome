@@ -18,7 +18,7 @@
   }
 
   async function deleteEverything() {
-    if (!confirm('Delete everything the built-in engine keeps in this browser?\n\nThis forgets the real values behind placeholders in your chats (they stay as placeholders), your settings and rules, the activity log and your license key.')) return;
+    if (!confirm('Delete everything the built-in engine keeps in this browser?\n\nThis forgets the real values behind placeholders in your chats (they stay as placeholders), your settings and rules and the activity log.')) return;
     busy = true;
     try {
       await engine.deleteEverything();
@@ -33,7 +33,7 @@
 <div class="page">
   <div>
     <h1>Dashboard</h1>
-    <p class="sub">The extension's built-in engine redacts emails, phone numbers, cards, IBANs, API keys and your own terms before claude.ai and chatgpt.com send them. It reads text files; PDFs and name detection need the Veil app.</p>
+    <p class="sub">When the Veil app isn't running, the extension's built-in engine redacts emails, phone numbers, cards, IBANs, API keys, IP addresses, national ID numbers and your own terms before claude.ai and chatgpt.com send them. It's free. Attached files and names are redacted by the Veil app.</p>
   </div>
 
   <section class="card">
@@ -55,7 +55,7 @@
 
   <section class="card">
     <h2>Delete everything</h2>
-    <p class="hint">Forgets what the built-in engine keeps in this browser: the encrypted values, settings, rules, activity and the license key.</p>
+    <p class="hint">Forgets what the built-in engine keeps in this browser: the encrypted values, settings, rules and activity.</p>
     <button class="btn" type="button" disabled={busy} onclick={deleteEverything}>Delete everything…</button>
   </section>
 </div>

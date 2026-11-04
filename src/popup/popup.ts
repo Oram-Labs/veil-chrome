@@ -31,6 +31,7 @@ async function main(): Promise<void> {
     const settings = $<HTMLButtonElement>('settings');
     settings.textContent = view.settings;
     settings.hidden = false;
+    $('action').hidden = false;
     settings.addEventListener('click', () => void chrome.runtime.openOptionsPage());
   }
   if (view.action) showAction(view.action);

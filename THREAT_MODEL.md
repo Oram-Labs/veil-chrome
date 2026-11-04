@@ -20,7 +20,7 @@ Nov 2026. The extension's own risks, with the Veil app and with its built-in eng
 
 - **It sees** every request and reply on claude.ai and chatgpt.com that can carry chat text (`src/sites.ts`), and the chat data built into chatgpt.com pages on a reload.
 - **It sends them only to the Veil app**, through the native messaging host `com.veil.app.native`. Its one connection of its own is the popup's GET of `https://getveil.tech/download/latest.json`, without cookies and with nothing about you in it, to say when a newer version is out; it's the only server address in its code (`tests/guarantees.test.ts`).
-- **It stores** the number of values replaced in each tab (until the tab closes), your preferences, and which engine each chat used (by the chat's id, the most recent 500). For the built-in engine it also keeps its settings, rules, license key and activity counts (kinds and counts, no values), and the values behind its placeholders, encrypted (below). No chat text.
+- **It stores** the number of values replaced in each tab (until the tab closes), your preferences, and which engine each chat used (by the chat's id, the most recent 500). For the built-in engine it also keeps its settings, rules and activity counts (kinds and counts, no values), and the values behind its placeholders, encrypted (below). No chat text.
 - **With "Capture traffic" on in the app**, a debugging setting, the extension also reports what the chat page does, with request and reply bodies, to the app, which writes them to its capture folder on your computer. These hold real values and stay on the computer. Nothing is reported while it's off.
 
 ## Risks, and what limits them
@@ -36,6 +36,10 @@ Without the app, the values behind placeholders ("ana@example.com is `[EMAIL_1]`
 **Protects against:** someone who copies the browser profile's files (a backup, a stolen disk image that is read without the user's session, a script that reads IndexedDB's files) and doesn't also use the browser as you: the values aren't in the files in the clear, and the key can't be read out of the browser's API.
 
 **Doesn't protect against:** anyone or anything that can run as this extension or as you in this browser profile: it can ask the browser to decrypt, and so can any program that can use your unlocked session. The key lives beside the data it protects, so this is encryption at rest in the browser's storage, not a vault with its own secret. Values that are no longer needed are forgotten after the retention period (7 days since last use by default) and when you choose **Delete everything** in the extension's settings, which also removes the key.
+
+### Attached files without the app
+
+The built-in engine doesn't read files. Without the app, a file you attach is sent as it is, with a notice on the page, or held back if you chose **Block** for files Veil can't check in the extension's settings. **Limit:** with the default (**Warn**), what is in the file reaches the site unredacted; choose **Block** if that matters, or use the app.
 
 **Limit:** the extension keeps only what the engine reports: a placeholder's value, its kind and number, the conversation it belongs to (a keyed hash, not the chat's id), and when it was last used.
 
@@ -66,7 +70,6 @@ On a chatgpt.com reload, values are restored inside chat data that the page then
 - Other extensions with permission to read claude.ai or chatgpt.com: they can read the page, as they could without Veil.
 - What the sites do with the redacted text.
 - The Veil app's own handling of what it receives, beyond [PROTOCOL.md](PROTOCOL.md).
-- A license key's secrecy: the extension checks keys offline and keeps the one you enter; a copied key works anywhere, as it does in the app.
 
 ## Reporting a vulnerability
 

@@ -1,13 +1,12 @@
 // End to end for the built-in engine: Chromium with the extension, no Veil
 // app (no native host is registered), and local stand-ins for claude.ai and
-// chatgpt.com. Checks that the extension redacts and restores by itself once
-// a license key is in its settings, keeps working after the browser restarts,
+// chatgpt.com. Checks that the extension redacts and restores by itself,
+// leaves attached files to the app, keeps working after the browser restarts,
 // forgets everything on request, and keeps a chat with the engine that
 // started it when the app appears.
 //
-// The extension is built here with the engine package that accepts the test
-// license (`scripts/build-npm.sh --dev-license` in veil-engine; VEIL_ENGINE_DIR
-// points at it, and VEIL_TEST_LICENSE at the key).
+// The extension is built here, with the installed engine package or the one
+// VEIL_ENGINE_DIR points at.
 
 import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -19,8 +18,7 @@ import { CHAT_ID, selfSignedCert, startSites, type Received } from './sites';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const root = resolve(here, '..');
-const engineDir = process.env.VEIL_ENGINE_DIR ?? resolve(root, '../veil-engine/target/npm-dev');
-const licenseFile = process.env.VEIL_TEST_LICENSE ?? resolve(root, '../veil-engine/fixtures/license/test.veil-license');
+const engineDir = process.env.VEIL_ENGINE_DIR ?? resolve(root, 'node_modules/veil-engine');
 const EXTENSION_ID = 'kgkmpkkhpegbhjloakfcibgfgpmfdjil';
 const EMAIL = 'ana.popescu@example.com';
 const PHONE = '+40 721 234 567';
@@ -71,19 +69,17 @@ async function send(page: Page, text: string): Promise<void> {
   await page.click('#send');
 }
 
-async function activate(): Promise<void> {
-  const options = await context.newPage();
-  await options.goto(`chrome-extension://${EXTENSION_ID}/options.html`);
-  await options.fill('#license-key', readFileSync(licenseFile, 'utf8').trim());
-  await options.getByRole('button', { name: /activate/i }).click();
-  await expect(options.getByRole('heading', { name: 'Dashboard' })).toBeVisible({ timeout: 15_000 });
-  await options.close();
+async function options(screen = 'dashboard'): Promise<Page> {
+  const page = await context.newPage();
+  await page.goto(`chrome-extension://${EXTENSION_ID}/options.html#/${screen}`);
+  await expect(page.locator('main h1')).toBeVisible({ timeout: 15_000 });
+  return page;
 }
 
 test.describe.configure({ mode: 'serial' });
 
 test.beforeAll(async () => {
-  test.skip(!existsSync(join(engineDir, 'veil_engine_wasm_bg.wasm')) || !existsSync(licenseFile), 'build veil-engine with `scripts/build-npm.sh --dev-license` first');
+  test.skip(!existsSync(join(engineDir, 'veil_engine_wasm_bg.wasm')), 'install the veil-engine package first');
   work = mkdtempSync(join(tmpdir(), 'veil-local-e2e-'));
   hostDir = join(work, 'host');
   mkdirSync(hostDir);
@@ -104,30 +100,13 @@ test.afterAll(async () => {
   if (work) rmSync(work, { recursive: true, force: true });
 });
 
-test('without a license key and without the app, sending waits, and the popup points to the built-in engine', async () => {
-  const page = await context.newPage();
-  await page.goto('https://chatgpt.com/');
-  const before = received.length;
-  await send(page, `write to ${EMAIL}`);
-  await expect(page.locator('#status')).toHaveText('status 403', { timeout: 15_000 });
-  expect(received.length).toBe(before);
-  await page.close();
-
+test('without the app, the built-in engine protects at once, and the popup says so', async () => {
   const popup = await context.newPage();
   await popup.goto(`chrome-extension://${EXTENSION_ID}/popup.html`);
+  await expect(popup.locator('#versions')).toContainText('Built-in engine');
   await expect(popup.locator('#settings')).toBeVisible();
-  await expect(popup.locator('#help')).toContainText('license key');
+  await expect(popup.locator('#download')).toHaveText('Get the Veil app');
   await popup.close();
-});
-
-test('a wrong license key is refused, the right one activates', async () => {
-  const options = await context.newPage();
-  await options.goto(`chrome-extension://${EXTENSION_ID}/options.html`);
-  await options.fill('#license-key', 'VEIL1.not.real');
-  await options.getByRole('button', { name: /activate/i }).click();
-  await expect(options.locator('.bad, [role="alert"]').first()).toBeVisible();
-  await options.close();
-  await activate();
 });
 
 for (const site of ['chatgpt.com', 'claude.ai']) {
@@ -148,20 +127,25 @@ for (const site of ['chatgpt.com', 'claude.ai']) {
   });
 }
 
-test('attached text files, .env included, go up redacted', async () => {
+test('attached files are left to the app: sent as they are with a notice, or held back with Block', async () => {
   const page = await context.newPage();
   await page.goto('https://claude.ai/chat/11111111-2222-4333-8444-555555555555');
-  const before = received.length;
-  await page.setInputFiles('#file', [
-    { name: 'notes.txt', mimeType: 'text/plain', buffer: Buffer.from(`Contact ${EMAIL} about the invoice`) },
-    { name: '.env', mimeType: 'application/octet-stream', buffer: Buffer.from(`MAIL=${EMAIL}\n`) },
-  ]);
-  await expect(page.locator('#uploads')).toContainText('notes (redacted).txt 200', { timeout: 15_000 });
-  await expect(page.locator('#uploads')).toContainText('.env (redacted).txt 200');
-  const bodies = received.slice(before).filter((r) => r.path === '/upload').map((r) => r.body).join('\n');
-  expect(bodies).not.toContain(EMAIL);
-  expect(bodies).toContain('[EMAIL_');
+  await page.setInputFiles('#file', [{ name: 'notes.txt', mimeType: 'text/plain', buffer: Buffer.from(`Contact ${EMAIL}`) }]);
+  await expect(page.locator('#uploads')).toContainText('notes.txt 200', { timeout: 15_000 });
+  await expect(page.locator('veil-banner')).toHaveCount(1);
   await page.close();
+
+  const behavior = await options('behavior');
+  await behavior.getByRole('group', { name: 'Images, files and unrecognised requests' }).getByRole('button', { name: 'Block' }).click();
+  await expect(behavior.getByRole('button', { name: 'Block', pressed: true })).toBeVisible();
+  await behavior.close();
+  const again = await context.newPage();
+  await again.goto('https://claude.ai/chat/11111111-2222-4333-8444-555555555555');
+  const before = received.length;
+  await again.setInputFiles('#file', [{ name: 'notes.txt', mimeType: 'text/plain', buffer: Buffer.from(`Contact ${EMAIL}`) }]);
+  await expect(again.locator('veil-banner')).toHaveCount(1, { timeout: 15_000 });
+  expect(received.slice(before).filter((r) => r.path === '/upload')).toHaveLength(0);
+  await again.close();
 });
 
 test('after the browser restarts, a chat made before still shows real values', async () => {
@@ -174,13 +158,12 @@ test('after the browser restarts, a chat made before still shows real values', a
 });
 
 test('the settings page shows what it did today, and the rules apply at once', async () => {
-  const options = await context.newPage();
-  await options.goto(`chrome-extension://${EXTENSION_ID}/options.html#/dashboard`);
-  await expect(options.getByText(/value\(s\) hidden/)).toBeVisible({ timeout: 15_000 });
-  await options.goto(`chrome-extension://${EXTENSION_ID}/options.html#/playground`);
-  await options.locator('#input').fill(`write to ${EMAIL}`);
-  await expect(options.getByText('[EMAIL_1]').first()).toBeVisible({ timeout: 15_000 });
-  await options.close();
+  const page = await options('dashboard');
+  await expect(page.getByText(/value\(s\) hidden/)).toBeVisible({ timeout: 15_000 });
+  await page.goto(`chrome-extension://${EXTENSION_ID}/options.html#/playground`);
+  await page.locator('#input').fill(`write to ${EMAIL}`);
+  await expect(page.getByText('[EMAIL_1]').first()).toBeVisible({ timeout: 15_000 });
+  await page.close();
 });
 
 test('a chat the built-in engine started stays with it when the app appears, and a new chat uses the app', async () => {
@@ -220,40 +203,30 @@ test('a chat the built-in engine started stays with it when the app appears, and
   writeFileSync(join(hostDir, 'stopped'), '');
 });
 
-test('"Delete everything" forgets the values, the settings and the key', async () => {
-  const options = await context.newPage();
-  options.on('dialog', (d) => void d.accept());
-  await options.goto(`chrome-extension://${EXTENSION_ID}/options.html#/dashboard`);
-  await options.getByRole('button', { name: /delete everything/i }).click();
-  await expect(options.locator('#license-key')).toBeVisible({ timeout: 15_000 });
-  const stored = await options.evaluate(() => chrome.storage.local.get(null));
-  expect(Object.keys(stored)).not.toContain('license');
-  await options.close();
-
-  // The key is gone, so sending waits again.
-  const page = await context.newPage();
-  await page.goto('https://chatgpt.com/');
-  await send(page, `write to ${EMAIL}`);
-  await expect(page.locator('#status')).toHaveText('status 403', { timeout: 15_000 });
+test('"Delete everything" forgets the values and the settings', async () => {
+  const page = await options('dashboard');
+  page.on('dialog', (d) => void d.accept());
+  await page.getByRole('button', { name: /delete everything/i }).click();
+  await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible({ timeout: 15_000 });
+  const stored = await page.evaluate(() => chrome.storage.local.get(null));
+  for (const key of ['config', 'rules', 'activity']) expect(Object.keys(stored)).not.toContain(key);
   await page.close();
+
+  // The chat made before shows its placeholders now: the values are gone.
+  const chat = await context.newPage();
+  await chat.goto(`https://chatgpt.com/c/${CHAT_ID}`);
+  await expect(chat.locator('#ssr')).toContainText(/\[(EMAIL|PHONE)_1\]/, { timeout: 15_000 });
+  await expect(chat.locator('#ssr')).not.toContainText(EMAIL);
+  await chat.close();
 });
 
-test('an activated app gives its license key to the built-in engine, which then works without the app', async () => {
-  installApp();
-  writeFileSync(join(hostDir, 'license.key'), readFileSync(licenseFile, 'utf8'));
-  rmSync(join(hostDir, 'stopped'), { force: true });
-  const popup = await context.newPage();
-  await popup.goto(`chrome-extension://${EXTENSION_ID}/popup.html`);
-  await expect(popup.locator('#versions')).toContainText('Veil app mock');
-  await expect.poll(async () => Object.keys(await popup.evaluate(() => chrome.storage.local.get(null)))).toContain('license');
-  await popup.close();
-
-  writeFileSync(join(hostDir, 'stopped'), '');
-  const page = await context.newPage();
-  await page.goto('https://chatgpt.com/');
-  const before = received.length;
-  await send(page, `write to ${EMAIL}`);
-  await expect.poll(() => received.length, { timeout: 15_000 }).toBeGreaterThan(before);
-  expect(received[received.length - 1].body).not.toContain(EMAIL);
+test('with the built-in engine turned off, sending waits for the app', async () => {
+  const page = await options('dashboard');
+  await page.getByRole('switch', { name: 'Use the built-in engine' }).click();
   await page.close();
+  const site = await context.newPage();
+  await site.goto('https://chatgpt.com/');
+  await send(site, `write to ${EMAIL}`);
+  await expect(site.locator('#status')).toHaveText('status 403', { timeout: 15_000 });
+  await site.close();
 });

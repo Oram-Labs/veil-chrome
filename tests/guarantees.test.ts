@@ -114,15 +114,13 @@ describe('storage', () => {
     ]);
   });
 
-  it('keeps for the built-in engine only its license key, settings, rules, activity counts, on/off choice and pause', () => {
+  it('keeps for the built-in engine only its settings, rules, activity counts, on/off choice and pause', () => {
     expect(found(/store\.(set|remove)\(\s*[A-Z_a-z']+/g)).toEqual([
       "local/engine.ts: store.remove('paused'",
       "local/engine.ts: store.set('paused'",
       'local/engine.ts: store.remove(key',
-      'local/engine.ts: store.remove(LICENSE',
       'local/engine.ts: store.set(ACTIVITY',
       'local/engine.ts: store.set(CONFIG',
-      'local/engine.ts: store.set(LICENSE',
       'local/engine.ts: store.set(LOCAL',
       'local/engine.ts: store.set(RULES',
     ].sort());

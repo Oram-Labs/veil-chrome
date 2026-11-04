@@ -12,7 +12,7 @@ describe('the popup', () => {
     const v = view({ ok: false, error: 'no_host' }, 'claude.ai', 0, false);
     expect(v.action?.kind).toBe('download');
     expect(v.settings).toBeTruthy();
-    expect(v.help).toContain('license key');
+    expect(v.help).toContain('built-in engine');
   });
 
   it('offers it when the app is not running too', () => {
@@ -25,8 +25,10 @@ describe('the popup', () => {
     const v = view(status({ engine: 'builtin' }), 'claude.ai', 2, false);
     expect(v.badge).toBe('Protecting');
     expect(v.help).toMatch(/built-in engine/);
-    expect(v.help).toMatch(/PDF/);
+    expect(v.help).toMatch(/files and names/);
     expect(v.settings).toBe('Settings');
+    expect(v.action?.kind).toBe('open');
+    expect(view(status({ engine: 'builtin', app: 'no_host' }), 'claude.ai', 0, false).action?.kind).toBe('download');
   });
 
   it('says nothing about the built-in engine when the app answers', () => {

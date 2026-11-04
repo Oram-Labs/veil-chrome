@@ -42,6 +42,14 @@ async function setUnprotected(site: string, on: boolean): Promise<void> {
   await popup.close();
 }
 
+/** Turns the built-in engine on or off, as the settings page does. With it on, a stopped app is replaced by it. */
+async function setBuiltIn(on: boolean): Promise<void> {
+  const popup = await context.newPage();
+  await popup.goto(`chrome-extension://${EXTENSION_ID}/popup.html`);
+  await popup.evaluate((v) => chrome.storage.local.set({ local: { enabled: v } }), on);
+  await popup.close();
+}
+
 async function send(page: Page, text: string): Promise<void> {
   await page.fill('#box', text);
   await page.click('#send');
@@ -150,7 +158,8 @@ test('requests that carry no chat text never reach the host', async () => {
   await page.close();
 });
 
-test('with Veil not running, sending is blocked, and pages still load', async () => {
+test('with Veil not running and the built-in engine off, sending is blocked, and pages still load', async () => {
+  await setBuiltIn(false);
   writeFileSync(join(hostDir, 'stopped'), '');
   try {
     const page = await context.newPage();
@@ -164,10 +173,12 @@ test('with Veil not running, sending is blocked, and pages still load', async ()
     await page.close();
   } finally {
     rmSync(join(hostDir, 'stopped'));
+    await setBuiltIn(true);
   }
 });
 
 test('with "send without protection" on, sends go through unchanged while Veil is not running', async () => {
+  await setBuiltIn(false);
   await setUnprotected('chatgpt.com', true);
   writeFileSync(join(hostDir, 'stopped'), '');
   try {
@@ -183,5 +194,6 @@ test('with "send without protection" on, sends go through unchanged while Veil i
   } finally {
     rmSync(join(hostDir, 'stopped'));
     await setUnprotected('chatgpt.com', false);
+    await setBuiltIn(true);
   }
 });

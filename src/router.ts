@@ -1,8 +1,8 @@
 // Which engine answers: the Veil app, or the extension's built-in engine.
 //
 // The app comes first, whenever it can be reached. Only when it can't (not
-// installed, not running) and the person has the built-in engine ready (a
-// license key saved, and not turned off) does the built-in engine answer. A
+// installed, not running), and unless the person turned it off, does the
+// built-in engine answer. A
 // chat stays with the engine that started it, because only that one knows
 // what its placeholders stand for; if that engine isn't there later, the
 // message waits (is blocked) instead of going to the other one, whose
@@ -121,7 +121,7 @@ export function makeRouter(app: Link, local: LocalLink, pins: Pins, now: () => n
       return action === 'rewrite' || action === 'replace';
     };
     if (engine === 'local') {
-      if (!(await local.available())) return blocked('This chat was started with the extension\'s built-in engine, which needs your license key. Enter it in the extension\'s settings.');
+      if (!(await local.available())) return blocked("This chat was started with the extension's built-in engine, which is turned off. Turn it on in the extension's settings.");
       return withTicket(await local.ask(op, payload));
     }
     if (engine === 'app') {
@@ -149,7 +149,8 @@ export function makeRouter(app: Link, local: LocalLink, pins: Pins, now: () => n
           const answer = await app.ask('status', payload);
           if (appUnreachable(answer) && (await local.available())) {
             const l = await local.ask<Record<string, unknown>>('status', payload);
-            return l.ok ? { ok: true, result: { ...l.result, engine: 'builtin' } } : l;
+            // Why the app didn't answer, so the popup can offer to install or open it.
+            return l.ok ? { ok: true, result: { ...l.result, engine: 'builtin', app: answer.ok ? undefined : answer.error } } : l;
           }
           return answer;
         }
@@ -177,7 +178,6 @@ export function makeRouter(app: Link, local: LocalLink, pins: Pins, now: () => n
           return appUnreachable(answer) ? { ok: true, result: { written: false } } : answer;
         }
         case 'open':
-        case 'license':
           return app.ask(op, payload);
       }
     },

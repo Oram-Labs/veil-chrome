@@ -60,6 +60,8 @@ export interface VeilStatus {
   documents?: DocumentsView;
   /** `builtin` when the extension's own engine answered, because the Veil app isn't running. */
   engine?: 'builtin';
+  /** With `engine`: why the Veil app didn't answer (`no_host`, `not_running`, …). */
+  app?: string;
 }
 
 /** A type of document Veil reads. */
@@ -115,12 +117,8 @@ export type Failure =
   | 'timeout'
   | string;
 
-/**
- * `open` starts the Veil app (the popup's "Open Veil" button). `license` asks it
- * for the license key in use, for the built-in engine; only the service
- * worker sends it, never a page.
- */
-export type Op = 'status' | 'request' | 'response' | 'observe' | 'page_data' | 'document' | 'open' | 'license';
+/** `open` starts the Veil app (the popup's "Open Veil" button). */
+export type Op = 'status' | 'request' | 'response' | 'observe' | 'page_data' | 'document' | 'open';
 
 /** Content script → service worker. */
 export interface Ask {

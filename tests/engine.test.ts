@@ -1,5 +1,5 @@
-// The built-in engine with the real WebAssembly. Needs the package built with
-// the test license: `scripts/build-npm.sh --dev-license` in veil-engine. Skipped without it.
+// The built-in engine with the real WebAssembly: the package built by
+// `scripts/build-npm.sh` in veil-engine. Skipped without it.
 
 import 'fake-indexeddb/auto';
 import { existsSync, readFileSync } from 'node:fs';
@@ -9,9 +9,8 @@ import { describe, expect, it } from 'vitest';
 import { LocalEngine, type Store } from '../src/local/engine';
 import { BrowserVault } from '../src/local/vault';
 
-const dir = process.env.VEIL_ENGINE_DEV_DIR ?? join(__dirname, '../../veil-engine/target/npm-dev');
-const licensePath = process.env.VEIL_TEST_LICENSE ?? join(__dirname, '../../veil-engine/fixtures/license/test.veil-license');
-const have = existsSync(join(dir, 'veil_engine_wasm_bg.wasm')) && existsSync(licensePath);
+const dir = process.env.VEIL_ENGINE_DIR ?? join(__dirname, '../node_modules/veil-engine');
+const have = existsSync(join(dir, 'veil_engine_wasm_bg.wasm'));
 
 // Placeholders are built at run time so nothing on the way rewrites them.
 const ph = (kind: string, n: number) => `${'['}${kind}_${n}${']'}`;
@@ -52,27 +51,17 @@ const send = (text: string, conversation = 'conv-1') => ({
 });
 
 describe.skipIf(!have)('the built-in engine', () => {
-  it('needs a license key before it will redact anything', async () => {
+  it('redacts without a license key, and not when it is turned off', async () => {
     const { engine: e } = engine();
-    expect(await e.available()).toBe(false);
-    const blocked = await e.ask<{ action: string }>('request', send('mail ana@example.com'));
-    expect(blocked.ok && blocked.result.action).toBe('block');
-    await e.setLicense(readFileSync(licensePath, 'utf8'));
     expect(await e.available()).toBe(true);
     const done = await e.ask<{ action: string }>('request', send('mail ana@example.com'));
     expect(done.ok && done.result.action).toBe('rewrite');
-  });
-
-  it('refuses a key that is not genuine, and keeps none', async () => {
-    const { engine: e, store } = engine();
-    await expect(e.setLicense('VEIL1.abc.def')).rejects.toThrow();
-    expect(store.data.has('license')).toBe(false);
-    expect((await e.licenseView()).state).toBe('missing');
+    await e.setEnabled(false);
+    expect(await e.available()).toBe(false);
   });
 
   it('restores an old chat after the browser restarts, from the encrypted vault', async () => {
     const first = engine();
-    await first.engine.setLicense(readFileSync(licensePath, 'utf8'));
     const sent = await first.engine.ask<{ body: string }>('request', send('write to ana@example.com'));
     const body = JSON.parse(Buffer.from((sent as { result: { body: string } }).result.body, 'base64').toString());
     const text = body.messages[0].content.parts[0] as string;
@@ -102,7 +91,6 @@ describe.skipIf(!have)('the built-in engine', () => {
 
   it('never stores a value in the clear', async () => {
     const { engine: e, idb, store } = engine();
-    await e.setLicense(readFileSync(licensePath, 'utf8'));
     await e.ask('request', send('mail ana.popescu@example.com'));
     await new Promise((r) => setTimeout(r, 1200));
     expect(JSON.stringify([...store.data])).not.toContain('ana.popescu');
@@ -112,14 +100,13 @@ describe.skipIf(!have)('the built-in engine', () => {
 
   it('deletes everything it keeps', async () => {
     const { engine: e, store, idb } = engine();
-    await e.setLicense(readFileSync(licensePath, 'utf8'));
     await e.patchConfig({ behavior: { mode: 'audit' } } as never);
     await e.ask('request', send('mail ana@example.com'));
     await new Promise((r) => setTimeout(r, 1200));
     await e.deleteEverything();
     expect([...store.data.keys()]).toEqual([]);
     expect(await new BrowserVault(idb).loadAll()).toEqual([]);
-    expect(await e.available()).toBe(false);
+    expect(await e.available()).toBe(true);
   });
 
   it('keeps settings and rules it was given, and refuses rules that do not compile', async () => {
@@ -137,7 +124,6 @@ describe.skipIf(!have)('the built-in engine', () => {
 
   it('counts what it did today, for the dashboard', async () => {
     const { engine: e } = engine();
-    await e.setLicense(readFileSync(licensePath, 'utf8'));
     const d = await e.ask<{ ticket: string }>('request', send('mail ana@example.com'));
     await e.ask('response', { ticket: (d as { result: { ticket: string } }).result.ticket, chunk: '', done: true, status: 200, content_type: 'text/event-stream' });
     const status = await e.status();

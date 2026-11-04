@@ -58,7 +58,7 @@ describe('the app comes first', () => {
 
   it('is asked for the status first, and the built-in engine answers when it is not there', async () => {
     const t = setup({ app: () => unreachable, local: () => ({ ok: true, result: { activated: true } }) });
-    expect(await t.router.route('status', {}, {})).toEqual({ ok: true, result: { activated: true, engine: 'builtin' } });
+    expect(await t.router.route('status', {}, {})).toEqual({ ok: true, result: { activated: true, engine: 'builtin', app: 'no_host' } });
     const ok = setup({ app: () => ({ ok: true, result: { activated: true } }) });
     expect(await ok.router.route('status', {}, {})).toEqual({ ok: true, result: { activated: true } });
     expect(ok.local.calls).toEqual([]);
@@ -88,7 +88,7 @@ describe('the built-in engine', () => {
     expect(await t.router.route('response', { ticket: 'beef', chunk: 'x', done: true }, {})).toEqual({ ok: true, result: { chunk: 'from-app' } });
   });
 
-  it('is not used without a license, or when turned off: the failure stands', async () => {
+  it('is not used when turned off: the failure stands', async () => {
     const t = setup({ app: () => unreachable, available: false });
     expect(await t.router.route('request', claude, { tabUrl: chatUrl })).toEqual(unreachable);
     expect(t.local.calls).toEqual([]);
@@ -115,12 +115,12 @@ describe('the built-in engine', () => {
     expect(t.local.calls).toEqual([]);
   });
 
-  it('blocks a chat it started when its license is gone', async () => {
+  it('blocks a chat it started when it has been turned off', async () => {
     const t = setup({ app: () => unreachable, available: false });
     t.pins.all.set('claude.ai:11111111-2222-4333-8444-555555555555', 'local');
     const a = await t.router.route('request', claude, { tabUrl: chatUrl });
     expect(a).toMatchObject({ ok: true, result: { action: 'block' } });
-    expect(JSON.stringify(a)).toContain('license');
+    expect(JSON.stringify(a)).toContain('turned off');
   });
 
   it('does not tie a chat to an engine that sent its message as it was', async () => {

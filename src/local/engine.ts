@@ -3,18 +3,19 @@
 // package). It answers the same operations as the Veil app (PROTOCOL.md), so
 // the rest of the extension doesn't care which one it is talking to.
 //
-// It keeps three things in the browser: the settings and rules and the
-// license key (`chrome.storage.local`), and the vault of placeholders
-// (IndexedDB, encrypted: `vault.ts`).
+// It keeps two things in the browser: the settings and rules
+// (`chrome.storage.local`), and the vault of placeholders (IndexedDB,
+// encrypted: `vault.ts`). It needs no license key: it is free, and covers the
+// built-in detectors and your own terms; files and names need the Veil app.
 
 import type { LocalVeil } from 'veil-engine';
-import type { ActivityRecord, ConfigView, LicenseView, RecentMatch, RulesFile, RulesView, Settings, StatusView, TestRequest, TestResult } from 'veil-ui';
+import type { ActivityRecord, ConfigView, RecentMatch, RulesFile, RulesView, Settings, StatusView, TestRequest, TestResult } from 'veil-ui';
 import type { Answer, Op } from '../protocol';
 import { DEFAULT_EXPLANATION, DEFAULT_RULES, DEFAULT_SETTINGS } from './defaults';
 import { activityRecords, dayStart, deepMerge, statusView, type Logged } from './shapes';
 import type { BrowserVault, VaultEntry } from './vault';
 
-/** Where the settings, rules and license key are kept. */
+/** Where the settings and rules are kept. */
 export interface Store {
   get(key: string): Promise<unknown>;
   set(key: string, value: unknown): Promise<void>;
@@ -35,7 +36,6 @@ export interface Deps {
 }
 
 /** Keys in the store. */
-const LICENSE = 'license';
 const CONFIG = 'config';
 const RULES = 'rules';
 const ACTIVITY = 'activity';
@@ -70,14 +70,6 @@ export class LocalEngine {
     const wasm = await deps.wasm();
     const veil = new wasm.LocalVeil(JSON.stringify(await this.rules()), JSON.stringify(await this.settings()));
     veil.set_now(deps.now());
-    const key = await deps.store.get(LICENSE);
-    if (typeof key === 'string') {
-      try {
-        veil.set_license(key);
-      } catch {
-        // A key that no longer checks out stays out; the options page says so.
-      }
-    }
     veil.load_vault(JSON.stringify(await deps.vault.loadAll()));
     const activity = await deps.store.get(ACTIVITY);
     if (Array.isArray(activity)) veil.load_activity(JSON.stringify(activity));
@@ -104,11 +96,9 @@ export class LocalEngine {
     return this.saving;
   }
 
-  /** The built-in engine can be used: a license key is saved, and the person hasn't turned it off. */
+  /** The built-in engine can be used: the person hasn't turned it off. */
   async available(): Promise<boolean> {
-    const local = (await this.deps.store.get(LOCAL)) as { enabled?: boolean } | undefined;
-    if (local?.enabled === false) return false;
-    return (await this.licenseView()).state === 'licensed';
+    return this.enabled();
   }
 
   /** Answers one operation of the protocol, as the Veil app does. */
@@ -155,36 +145,6 @@ export class LocalEngine {
   }
 
   // What the settings screens ask for ---------------------------------------
-
-  async licenseView(): Promise<LicenseView> {
-    const key = await this.deps.store.get(LICENSE);
-    const base = { release_date: new Date(this.deps.now()).toISOString().slice(0, 10), source: null, removable: true };
-    if (typeof key !== 'string') {
-      return { state: 'missing', email: null, name: null, id: null, issued: null, updates_until: null, reason: null, ...base };
-    }
-    const wasm = await this.deps.wasm();
-    try {
-      const l = JSON.parse(wasm.check_license(key)) as { id: string; email: string; name?: string; issued: string; updates_until: string };
-      return { state: 'licensed', email: l.email, name: l.name ?? null, id: l.id, issued: l.issued, updates_until: l.updates_until, reason: null, ...base, source: 'file' };
-    } catch (e) {
-      return { state: 'invalid', email: null, name: null, id: null, issued: null, updates_until: null, reason: (e as Error).message, ...base };
-    }
-  }
-
-  /** Checks a key and, if it is genuine, keeps it. Throws what is wrong with it. */
-  async setLicense(key: string): Promise<LicenseView> {
-    const wasm = await this.deps.wasm();
-    wasm.check_license(key);
-    await this.deps.store.set(LICENSE, key.trim());
-    if (this.starting) (await this.veil()).set_license(key);
-    return this.licenseView();
-  }
-
-  async removeLicense(): Promise<LicenseView> {
-    await this.deps.store.remove(LICENSE);
-    if (this.starting) (await this.veil()).remove_license();
-    return this.licenseView();
-  }
 
   async config(): Promise<ConfigView> {
     return { settings: await this.settings(), locked: [], placeholder_explanation_default: DEFAULT_EXPLANATION };
@@ -237,13 +197,12 @@ export class LocalEngine {
     const veil = await this.veil();
     const settings = await this.settings();
     const info = JSON.parse(veil.vault_info()) as { entries: number; oldest_ms: number | null };
-    const license = await this.licenseView();
     return statusView({
       version: this.deps.version ?? '0.0.0',
       settings,
       running: !(await this.deps.store.get('paused')),
-      activated: license.state === 'licensed',
-      licensedTo: license.email,
+      activated: true,
+      licensedTo: null,
       log: JSON.parse(veil.activity()) as Logged[],
       now: this.deps.now(),
       vault: info,
@@ -265,14 +224,14 @@ export class LocalEngine {
     await this.saveVault(veil);
   }
 
-  /** Forgets everything the engine kept: values, activity, settings, rules, the license key and the vault key. */
+  /** Forgets everything the engine kept: values, activity, settings, rules and the vault key. */
   async deleteEverything(): Promise<void> {
     const veil = await this.veil();
     veil.clear_vault();
     veil.take_vault_changes();
     await this.saving;
     await this.deps.vault.destroy();
-    for (const key of [LICENSE, CONFIG, RULES, ACTIVITY, LOCAL, 'paused']) await this.deps.store.remove(key);
+    for (const key of [CONFIG, RULES, ACTIVITY, LOCAL, 'paused']) await this.deps.store.remove(key);
     this.starting = null;
   }
 

@@ -22,7 +22,7 @@ export function describe(status: Answer<VeilStatus>, site: Site | null, count: n
   if (!status.ok) {
     const missing = status.error === 'no_host';
     return {
-      settings: 'Use the built-in engine instead',
+      settings: 'Turn on the built-in engine',
       badge: missing ? 'Not installed' : 'Not running',
       tone: 'bad',
       summary: missing
@@ -31,7 +31,7 @@ export function describe(status: Answer<VeilStatus>, site: Site | null, count: n
       siteState: unprotected ? 'Sending unprotected' : 'Messages wait for Veil',
       count: count_text,
       help: missing
-        ? 'Install the Veil app and open it once, then reload this page. Or enter your license key in the extension\'s settings to use its built-in engine, without the app.'
+        ? "Install the Veil app and open it once, then reload this page. Or turn the extension's built-in engine back on in its settings."
         : unprotected
           ? 'Open the Veil app. Until then, messages on this site are sent unprotected.'
           : 'Open the Veil app. Until then, messages on this site are blocked, not sent unprotected.',
@@ -81,11 +81,19 @@ export function describe(status: Answer<VeilStatus>, site: Site | null, count: n
     siteState: siteOn ? mode.state : 'Off in Veil',
     count: count_text,
     help: builtIn
-      ? "Using the extension's built-in engine, because the Veil app isn't running. It reads text files, not PDFs, and doesn't detect names. Open the extension's settings to change what it does."
+      ? "Using the extension's built-in engine, because the Veil app isn't running. Attached files and names are redacted by the Veil app. Open the extension's settings to change what the built-in engine does."
       : site
         ? `Veil ${s.version}. Choose protected sites in Veil, under Client setup.`
         : 'Open claude.ai or chatgpt.com to see this site.',
-    ...(builtIn ? { settings: 'Settings' } : {}),
+    ...(builtIn
+      ? {
+          settings: 'Settings',
+          action:
+            s.app === 'no_host'
+              ? { kind: 'download' as const, label: 'Get the Veil app', href: `${SITE}/#download` }
+              : { kind: 'open' as const, label: 'Open Veil' },
+        }
+      : {}),
   };
 }
 

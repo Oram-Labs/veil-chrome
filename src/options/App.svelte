@@ -4,7 +4,6 @@
   // app is running, it holds the settings, and this page only points to it.
   import { onMount } from 'svelte';
   import {
-    Activate,
     ActivityScreen,
     BehaviorScreen,
     GeneralScreen,
@@ -88,8 +87,6 @@
       <button class="btn" type="button" onclick={() => chrome.runtime.sendMessage({ op: 'open' })}>Open Veil</button>
     </section>
   </main>
-{:else if app.status && !app.status.activated}
-  <Activate />
 {:else if app.config && app.rules}
   <div class="shell">
     <nav aria-label="Settings sections">
