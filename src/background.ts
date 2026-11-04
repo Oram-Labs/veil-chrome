@@ -73,7 +73,6 @@ const MANAGE: Record<string, (engine: LocalEngine, args: any[]) => Promise<unkno
   setRunning: (e, [running]) => e.setRunning(running),
   enabled: (e) => e.enabled(),
   setEnabled: (e, [on]) => e.setEnabled(on),
-  deleteEverything: (e) => e.deleteEverything(),
 };
 
 const OPS = new Set(['status', 'request', 'response', 'observe', 'page_data', 'document', 'open']);

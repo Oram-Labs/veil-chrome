@@ -105,17 +105,14 @@ describe.skipIf(!have)('the built-in engine', () => {
     expect(JSON.stringify([...session.data])).toContain('ana.popescu');
   });
 
-  it('forgets values now when asked, and deletes everything it keeps', async () => {
-    const { engine: e, store, session } = engine();
+  it('forgets values now when asked, and keeps the settings', async () => {
+    const { engine: e, session } = engine();
     await e.patchConfig({ behavior: { fail_closed: false } } as never);
     await e.ask('request', send('mail ana@example.com'));
     await new Promise((r) => setTimeout(r, 1200));
     await e.clearVault();
     expect(JSON.stringify([...session.data])).not.toContain('ana@example.com');
-    await e.deleteEverything();
-    expect([...store.data.keys()]).toEqual([]);
-    expect([...session.data.keys()].filter((k) => k.startsWith('m:'))).toEqual([]);
-    expect(await e.available()).toBe(true);
+    expect((await e.config()).settings.behavior.fail_closed).toBe(false);
   });
 
   it('runs the built-in detectors only, and refuses settings it can\'t use', async () => {

@@ -31,7 +31,7 @@ Requests that send text are blocked, and the page says why. Loading chats still 
 
 ### The built-in engine's placeholders
 
-Without the app, the extension has to remember which value each placeholder stands for ("ana@example.com is `[EMAIL_1]` in this chat") to restore replies. It keeps that only in Chrome's session storage: in memory, never written to disk, readable only by the extension's own pages and service worker (not by the sites' pages or content scripts), and emptied when the browser closes. **Forget values now** and **Delete everything**, in the extension's settings, empty it sooner.
+Without the app, the extension has to remember which value each placeholder stands for ("ana@example.com is `[EMAIL_1]` in this chat") to restore replies. It keeps that only in Chrome's session storage: in memory, never written to disk, readable only by the extension's own pages and service worker (not by the sites' pages or content scripts), and emptied when the browser closes. **Forget values now**, in the extension's settings, empties it sooner.
 
 **Protects against:** anyone who reads the browser profile's files, now or later (a backup, a copied disk, a script that reads the extension's storage files): the real values are never there.
 

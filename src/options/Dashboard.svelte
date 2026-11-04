@@ -1,11 +1,10 @@
 <script lang="ts">
   // What the built-in engine did today, and the few things only the
-  // extension has: using it, and deleting everything it keeps.
+  // extension has: using it, and forgetting the values it remembers.
   import { app, count, SettingRow, Switch, toast } from 'veil-ui';
   import { engine } from './localBackend';
 
   let enabled = $state(true);
-  let busy = $state(false);
 
   $effect(() => {
     void engine.enabled().then((v) => (enabled = v));
@@ -24,18 +23,6 @@
       toast.ok('Values forgotten');
     } catch (e) {
       toast.error((e as Error).message);
-    }
-  }
-
-  async function deleteEverything() {
-    if (!confirm('Delete everything the built-in engine keeps in this browser?\n\nThis forgets the real values behind placeholders in your chats (they stay as placeholders), your settings and rules and the activity counts.')) return;
-    busy = true;
-    try {
-      await engine.deleteEverything();
-      location.reload();
-    } catch (e) {
-      toast.error((e as Error).message);
-      busy = false;
     }
   }
 </script>
@@ -67,12 +54,6 @@
     <h2>Forget values now</h2>
     <p class="hint">The real values behind placeholders are kept in the browser's memory, never on disk, and forgotten when the browser closes. This forgets them now.</p>
     <button class="btn" type="button" onclick={forget}>Forget values now…</button>
-  </section>
-
-  <section class="card">
-    <h2>Delete everything</h2>
-    <p class="hint">Forgets what the built-in engine keeps in this browser: the values in memory, its settings, rules and activity counts.</p>
-    <button class="btn" type="button" disabled={busy} onclick={deleteEverything}>Delete everything…</button>
   </section>
 </div>
 

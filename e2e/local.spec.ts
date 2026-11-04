@@ -243,19 +243,27 @@ test('a chat the built-in engine started stays with it when the app appears, and
   writeFileSync(join(hostDir, 'stopped'), '');
 });
 
-test('"Delete everything" forgets the values and the settings', async () => {
-  const page = await options('dashboard');
-  page.on('dialog', (d) => void d.accept());
-  await page.getByRole('button', { name: /delete everything/i }).click();
-  await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible({ timeout: 15_000 });
-  const stored = await page.evaluate(() => chrome.storage.local.get(null));
-  for (const key of ['config', 'rules', 'activity']) expect(Object.keys(stored)).not.toContain(key);
-  await page.close();
-
-  // The chat made before shows its placeholders now: the values are gone.
+test('"Forget values now" forgets the values and keeps the settings', async () => {
+  const site = await context.newPage();
+  await site.goto('https://chatgpt.com/');
+  await send(site, `Call me at ${PHONE} or write to ${EMAIL}`);
+  await expect(site.locator('#reply')).toHaveText(`You said: Call me at ${PHONE} or write to ${EMAIL}`, { timeout: 15_000 });
+  await site.close();
   const chat = await context.newPage();
   await chat.goto(`https://chatgpt.com/c/${CHAT_ID}`);
-  await expect(chat.locator('#ssr')).toContainText(/\[(EMAIL|PHONE)_1\]/, { timeout: 15_000 });
+  await expect(chat.locator('#ssr')).toHaveText(`Call me at ${PHONE} or write to ${EMAIL}`, { timeout: 15_000 });
+
+  const page = await options('dashboard');
+  page.on('dialog', (d) => void d.accept());
+  await page.getByRole('button', { name: /forget values now/i }).click();
+  await expect(page.getByText('Values forgotten')).toBeVisible();
+  // The settings stay: Block for files was chosen above.
+  await page.goto(`chrome-extension://${EXTENSION_ID}/options.html#/behavior`);
+  await expect(page.getByRole('button', { name: 'Block', pressed: true })).toBeVisible({ timeout: 15_000 });
+  await page.close();
+
+  await chat.reload();
+  await expect(chat.locator('#ssr')).toContainText('[EMAIL_1]', { timeout: 15_000 });
   await expect(chat.locator('#ssr')).not.toContainText(EMAIL);
   await chat.close();
 });

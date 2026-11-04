@@ -118,7 +118,6 @@ describe('storage', () => {
     expect(found(/store\.(set|remove)\(\s*[A-Z_a-z']+/g)).toEqual([
       "local/engine.ts: store.remove('paused'",
       "local/engine.ts: store.set('paused'",
-      'local/engine.ts: store.remove(key',
       'local/engine.ts: store.set(ACTIVITY',
       'local/engine.ts: store.set(CONFIG',
       'local/engine.ts: store.set(LOCAL',

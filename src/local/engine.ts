@@ -219,17 +219,6 @@ export class LocalEngine {
     await this.saveVault(veil);
   }
 
-  /** Forgets everything the engine kept: values, activity, settings and rules. */
-  async deleteEverything(): Promise<void> {
-    const veil = await this.veil();
-    veil.clear_vault();
-    veil.take_vault_changes();
-    await this.saving;
-    await this.deps.memory.destroy();
-    for (const key of [CONFIG, RULES, ACTIVITY, LOCAL, 'paused']) await this.deps.store.remove(key);
-    this.starting = null;
-  }
-
   /** Whether the built-in engine is used when the Veil app can't be reached. */
   async setEnabled(enabled: boolean): Promise<void> {
     await this.deps.store.set(LOCAL, { enabled });

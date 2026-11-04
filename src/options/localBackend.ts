@@ -98,5 +98,4 @@ export const engine = {
   forgetValues: () => call<void>('clearVault'),
   enabled: () => call<boolean>('enabled'),
   setEnabled: (on: boolean) => call<void>('setEnabled', on),
-  deleteEverything: () => call<void>('deleteEverything'),
 };
