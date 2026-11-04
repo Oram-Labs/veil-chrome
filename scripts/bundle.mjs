@@ -42,7 +42,10 @@ export async function bundle(root, out, logLevel = 'info') {
     sourcemap: false,
     legalComments: 'none',
     // The screens shared with the Veil app (veil-ui) are Svelte components.
-    plugins: [sveltePlugin({ compilerOptions: { css: 'external' } })],
+    // Their styles go inside the JavaScript: as separate CSS, the plugin marks
+    // each with the absolute path of the build machine, which would put that
+    // path in the zip and make it differ from machine to machine.
+    plugins: [sveltePlugin({ compilerOptions: { css: 'injected' } })],
     conditions: ['svelte', 'browser'],
     mainFields: ['svelte', 'browser', 'module', 'main'],
     alias: { 'veil-engine': engine },

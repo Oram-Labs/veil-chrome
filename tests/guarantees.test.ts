@@ -144,3 +144,22 @@ describe('the build', () => {
     expect(build).not.toMatch(/\bminify(Whitespace|Identifiers|Syntax):\s*true\b/);
   });
 });
+
+describe('the bundle', () => {
+  it('holds no path of the machine it was built on, so every machine builds the same zip', async () => {
+    const { mkdtempSync, rmSync } = await import('node:fs');
+    const { tmpdir } = await import('node:os');
+    const { bundle } = await import('../scripts/bundle.mjs');
+    const out = mkdtempSync(join(tmpdir(), 'veil-bundle-'));
+    try {
+      await bundle(root, out, 'silent');
+      for (const name of readdirSync(out).filter((n) => /\.(js|css|html|json)$/.test(n))) {
+        const text = readFileSync(join(out, name), 'utf8');
+        expect(text.includes(root), name).toBe(false);
+        expect(/\/(Users|home)\/[^/\s]+\//.test(text), name).toBe(false);
+      }
+    } finally {
+      rmSync(out, { recursive: true, force: true });
+    }
+  }, 60_000);
+});
