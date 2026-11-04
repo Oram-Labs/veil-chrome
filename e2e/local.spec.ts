@@ -114,7 +114,12 @@ test('the dashboard says what the Veil app adds, and the card can be hidden', as
   const card = page.getByRole('region', { name: 'Get more out of Veil with the app' });
   await expect(card).toBeVisible();
   await expect(card.getByText('Attached documents')).toBeVisible();
-  await expect(card.getByRole('link', { name: 'Get the Veil app' })).toHaveAttribute('href', 'https://getveil.tech/#download');
+  const [download] = await Promise.all([
+    context.waitForEvent('page', { predicate: (p) => p.url().startsWith('https://getveil.tech/') }),
+    card.getByRole('button', { name: 'Get the Veil app' }).click(),
+  ]);
+  expect(download.url()).toBe('https://getveil.tech/#download');
+  await download.close();
   await card.getByRole('button', { name: 'Hide for 30 days' }).click();
   await expect(card).toHaveCount(0);
   await page.reload();
@@ -300,6 +305,6 @@ test('with the app installed but not running, the card offers to open it', async
   const page = await options('dashboard');
   const card = page.getByRole('region', { name: 'Get more out of Veil with the app' });
   await expect(card.getByRole('button', { name: 'Open Veil' })).toBeVisible();
-  await expect(card.getByRole('link', { name: 'Get the Veil app' })).toHaveCount(0);
+  await expect(card.getByRole('button', { name: 'Get the Veil app' })).toHaveCount(0);
   await page.close();
 });

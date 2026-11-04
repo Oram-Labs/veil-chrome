@@ -69,7 +69,7 @@
     </ul>
     <div class="actions">
       {#if appMissing}
-        <a class="btn primary" href="{SITE}/#download" target="_blank" rel="noreferrer">Get the Veil app</a>
+        <button class="btn primary" type="button" onclick={() => chrome.tabs.create({ url: `${SITE}/#download` })}>Get the Veil app</button>
       {:else}
         <button class="btn primary" type="button" onclick={openApp}>Open Veil</button>
       {/if}
@@ -143,11 +143,6 @@
     align-items: center;
     flex-wrap: wrap;
     gap: 12px;
-  }
-  .actions a {
-    display: inline-flex;
-    align-items: center;
-    text-decoration: none;
   }
   @media (max-width: 560px) {
     .features {
