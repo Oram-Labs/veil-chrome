@@ -60,6 +60,13 @@
     opening = false;
   }
 
+  // The theme chosen in General.
+  $effect(() => {
+    const theme = app.config?.settings.app.theme ?? 'system';
+    if (theme === 'system') document.documentElement.removeAttribute('data-theme');
+    else document.documentElement.setAttribute('data-theme', theme);
+  });
+
   onMount(() => {
     route = fromHash();
     window.addEventListener('hashchange', () => (route = fromHash()));

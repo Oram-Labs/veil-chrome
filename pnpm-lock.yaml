@@ -12,8 +12,8 @@ importers:
         specifier: file:../veil-engine/target/npm/veil-engine-0.2.1.tgz
         version: file:../veil-engine/target/npm/veil-engine-0.2.1.tgz
       veil-ui:
-        specifier: file:../veil-ui/veil-ui-0.1.0.tgz
-        version: file:../veil-ui/veil-ui-0.1.0.tgz(svelte@5.57.3)
+        specifier: file:../veil-ui/veil-ui-0.1.1.tgz
+        version: file:../veil-ui/veil-ui-0.1.1.tgz(svelte@5.57.3)
     devDependencies:
       '@playwright/test':
         specifier: 1.56.1
@@ -787,9 +787,9 @@ packages:
     resolution: {integrity: sha512-ZFMK8caKzSp2afOrTCnDK+oZn7J3JXpW25vclFTvGP1uYjYH57Df7Wz91GY7THsGE76airSslNrG3epMw04AZA==, tarball: file:../veil-engine/target/npm/veil-engine-0.2.1.tgz}
     version: 0.2.1
 
-  veil-ui@file:../veil-ui/veil-ui-0.1.0.tgz:
-    resolution: {integrity: sha512-cwhzb0w+Z6OYv7XwGPREz216iQmnxwGN3XpGq22h5yqWw0E6322t2N7QhoDXGJa0NS/NdBZyOkrtqcCsfqDgYw==, tarball: file:../veil-ui/veil-ui-0.1.0.tgz}
-    version: 0.1.0
+  veil-ui@file:../veil-ui/veil-ui-0.1.1.tgz:
+    resolution: {integrity: sha512-2asHgtH4KZRvp079RUmbjMnKtlsmM31wVrjb99QE8VZSmtDShrrg+KMb/qlc0h8N7NLBvs0QslrZaKr5FJ+apQ==, tarball: file:../veil-ui/veil-ui-0.1.1.tgz}
+    version: 0.1.1
     peerDependencies:
       svelte: ^5
 
@@ -1450,7 +1450,7 @@ snapshots:
 
   veil-engine@file:../veil-engine/target/npm/veil-engine-0.2.1.tgz: {}
 
-  veil-ui@file:../veil-ui/veil-ui-0.1.0.tgz(svelte@5.57.3):
+  veil-ui@file:../veil-ui/veil-ui-0.1.1.tgz(svelte@5.57.3):
     dependencies:
       svelte: 5.57.3
 

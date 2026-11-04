@@ -24,6 +24,6 @@
   },
   "dependencies": {
     "veil-engine": "file:../veil-engine/target/npm/veil-engine-0.2.1.tgz",
-    "veil-ui": "file:../veil-ui/veil-ui-0.1.0.tgz"
+    "veil-ui": "file:../veil-ui/veil-ui-0.1.1.tgz"
   }
 }

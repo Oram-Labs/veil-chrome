@@ -30,7 +30,15 @@ function terms(text: string, format: DictionaryImport['format'], type: string): 
 }
 
 export const localBackend: Backend = {
-  capabilities: { nameDetection: false, pdf: false, desktopApps: false, apiEndpoints: false, diagnostics: false },
+  capabilities: {
+    nameDetection: false,
+    pdf: false,
+    desktopApps: false,
+    apiEndpoints: false,
+    diagnostics: false,
+    appSettings: false,
+    vaultStorage: false,
+  },
   status: () => call('status'),
   config: () => call('config'),
   patchConfig: (patch) => call('patchConfig', patch),
