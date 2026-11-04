@@ -12,7 +12,6 @@
     Shield,
     StatusBadge,
     Toasts,
-    VaultScreen,
     app,
     start,
     type ScreenName
@@ -26,7 +25,6 @@
     { name: 'behavior', label: 'Behavior' },
     { name: 'playground', label: 'Test playground' },
     { name: 'activity', label: 'Activity' },
-    { name: 'vault', label: 'Vault and privacy' },
     { name: 'general', label: 'General' }
   ];
 
@@ -103,7 +101,6 @@
         {:else if route === 'behavior'}<BehaviorScreen />
         {:else if route === 'playground'}<PlaygroundScreen />
         {:else if route === 'activity'}<ActivityScreen />
-        {:else if route === 'vault'}<VaultScreen />
         {:else if route === 'general'}<GeneralScreen />
         {/if}
       </div>

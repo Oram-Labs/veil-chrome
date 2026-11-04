@@ -20,7 +20,7 @@ Nov 2026. The extension's own risks, with the Veil app and with its built-in eng
 
 - **It sees** every request and reply on claude.ai and chatgpt.com that can carry chat text (`src/sites.ts`), and the chat data built into chatgpt.com pages on a reload.
 - **It sends them only to the Veil app**, through the native messaging host `com.veil.app.native`. Its one connection of its own is the popup's GET of `https://getveil.tech/download/latest.json`, without cookies and with nothing about you in it, to say when a newer version is out; it's the only server address in its code (`tests/guarantees.test.ts`).
-- **It stores** the number of values replaced in each tab (until the tab closes), your preferences, and which engine each chat used (by the chat's id, the most recent 500). For the built-in engine it also keeps its settings, rules and activity counts (kinds and counts, no values), and the values behind its placeholders, encrypted (below). No chat text.
+- **It stores** your preferences and, for the built-in engine, its settings, rules and activity counts (kinds and counts, no values). **In memory, until the browser closes** (Chrome's session storage, not written to disk): the number of values replaced in each tab, which engine each chat used (by the chat's id, the most recent 500), and the values behind the built-in engine's placeholders (below). No chat text.
 - **With "Capture traffic" on in the app**, a debugging setting, the extension also reports what the chat page does, with request and reply bodies, to the app, which writes them to its capture folder on your computer. These hold real values and stay on the computer. Nothing is reported while it's off.
 
 ## Risks, and what limits them
@@ -29,23 +29,23 @@ Nov 2026. The extension's own risks, with the Veil app and with its built-in eng
 
 Requests that send text are blocked, and the page says why. Loading chats still works, showing placeholders. **Limit:** you can choose "send without protection" for a site in the popup, which then lets messages through unredacted while the app is unreachable. The popup shows when that is on.
 
-### The built-in engine's vault
+### The built-in engine's placeholders
 
-Without the app, the values behind placeholders ("ana@example.com is `[EMAIL_1]` in this chat") are kept in the browser, so a chat can be restored after the browser restarts. Each is encrypted with AES-GCM under a key the browser made on first use and keeps as a non-extractable key in IndexedDB, with the entry's name bound in as associated data. No passphrase is asked.
+Without the app, the extension has to remember which value each placeholder stands for ("ana@example.com is `[EMAIL_1]` in this chat") to restore replies. It keeps that only in Chrome's session storage: in memory, never written to disk, readable only by the extension's own pages and service worker (not by the sites' pages or content scripts), and emptied when the browser closes. **Forget values now** and **Delete everything**, in the extension's settings, empty it sooner.
 
-**Protects against:** someone who copies the browser profile's files (a backup, a stolen disk image that is read without the user's session, a script that reads IndexedDB's files) and doesn't also use the browser as you: the values aren't in the files in the clear, and the key can't be read out of the browser's API.
+**Protects against:** anyone who reads the browser profile's files, now or later (a backup, a copied disk, a script that reads the extension's storage files): the real values are never there.
 
-**Doesn't protect against:** anyone or anything that can run as this extension or as you in this browser profile: it can ask the browser to decrypt, and so can any program that can use your unlocked session. The key lives beside the data it protects, so this is encryption at rest in the browser's storage, not a vault with its own secret. Values that are no longer needed are forgotten after the retention period (7 days since last use by default) and when you choose **Delete everything** in the extension's settings, which also removes the key.
+**Doesn't protect against:** anything that can read the browser's memory or run as this extension while the browser is open. The values are not encrypted in memory.
+
+**Limits:** after the browser restarts, earlier chats show their placeholders, and a new message in such a chat starts numbering again, so `[EMAIL_1]` may stand for a different address than in the chat's earlier messages; the model sees both. The Veil app keeps values for good, encrypted, on the computer. Chrome's session storage holds about 10 MB; when it is full, the oldest values are forgotten first.
 
 ### Attached files without the app
 
 The built-in engine doesn't read files. Without the app, a file you attach is sent as it is, with a notice on the page, or held back if you chose **Block** for files Veil can't check in the extension's settings. **Limit:** with the default (**Warn**), what is in the file reaches the site unredacted; choose **Block** if that matters, or use the app.
 
-**Limit:** the extension keeps only what the engine reports: a placeholder's value, its kind and number, the conversation it belongs to (a keyed hash, not the chat's id), and when it was last used.
-
 ### Two engines, one chat
 
-A placeholder means a value only to the engine that made it. If a chat were started with one engine and continued with the other, `[EMAIL_1]` could stand for a different address, and a reply would be restored to the wrong value. So a chat stays with the engine that started it, and when that engine isn't available the message is blocked rather than sent through the other. **Limit:** the chat is recognised by its address; a new chat is attributed to its tab for ten minutes until its address names it. A chat opened from another browser profile or after the stored record was dropped (the record keeps the last 500) goes to the app first.
+A placeholder means a value only to the engine that made it. If a chat were started with one engine and continued with the other, `[EMAIL_1]` could stand for a different address, and a reply would be restored to the wrong value. So a chat stays with the engine that started it, and when that engine isn't available the message is blocked rather than sent through the other. **Limit:** the chat is recognised by its address; a new chat is attributed to its tab for ten minutes until its address names it. After the browser restarts, or for a chat whose record was dropped (the record keeps the last 500), the chat goes to the app first; the built-in engine had nothing left of it anyway.
 
 ### The site changes
 

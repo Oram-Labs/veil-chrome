@@ -3,17 +3,18 @@
 // package). It answers the same operations as the Veil app (PROTOCOL.md), so
 // the rest of the extension doesn't care which one it is talking to.
 //
-// It keeps two things in the browser: the settings and rules
-// (`chrome.storage.local`), and the vault of placeholders (IndexedDB,
-// encrypted: `vault.ts`). It needs no license key: it is free, and covers the
-// built-in detectors and your own terms; files and names need the Veil app.
+// It keeps its settings, rules and activity counts in `chrome.storage.local`,
+// and the values behind its placeholders in memory, for the browser session
+// only (`memory.ts`). It needs no license key: it is free, and runs the
+// engine's built-in detectors; your own terms, files and names need the Veil
+// app.
 
 import type { LocalVeil } from 'veil-engine';
 import type { ActivityRecord, ConfigView, RecentMatch, RulesFile, RulesView, Settings, StatusView, TestRequest, TestResult } from 'veil-ui';
 import type { Answer, Op } from '../protocol';
 import { DEFAULT_EXPLANATION, DEFAULT_RULES, DEFAULT_SETTINGS } from './defaults';
 import { activityRecords, dayStart, deepMerge, statusView, type Logged } from './shapes';
-import type { BrowserVault, VaultEntry } from './vault';
+import type { MemoryEntry, SessionMemory } from './memory';
 
 /** Where the settings and rules are kept. */
 export interface Store {
@@ -28,7 +29,8 @@ export interface Deps {
   /** Loads the WebAssembly. */
   wasm: () => Promise<Wasm>;
   store: Store;
-  vault: BrowserVault;
+  /** Where the placeholders are kept for the browser session. */
+  memory: SessionMemory;
   now: () => number;
   /** Called while a reply is being restored, so the service worker isn't stopped in between. */
   keepAlive?: () => void;
@@ -41,7 +43,6 @@ const RULES = 'rules';
 const ACTIVITY = 'activity';
 const LOCAL = 'local';
 
-const HOUR = 60 * 60 * 1000;
 const KEEP_ALIVE_MS = 20_000;
 /** A reply not finished within this long is no longer waited for. */
 const REPLY_MS = 15 * 60 * 1000;
@@ -50,7 +51,6 @@ const MAX_ACTIVITY = 500;
 export class LocalEngine {
   private starting: Promise<LocalVeil> | null = null;
   private saving: Promise<void> = Promise.resolve();
-  private lastPurge = 0;
   private replies = new Map<string, number>();
   private timer: ReturnType<typeof setInterval> | null = null;
   private activityTimer: ReturnType<typeof setTimeout> | null = null;
@@ -70,11 +70,10 @@ export class LocalEngine {
     const wasm = await deps.wasm();
     const veil = new wasm.LocalVeil(JSON.stringify(await this.rules()), JSON.stringify(await this.settings()));
     veil.set_now(deps.now());
-    veil.load_vault(JSON.stringify(await deps.vault.loadAll()));
+    veil.load_vault(JSON.stringify(await deps.memory.loadAll()));
     const activity = await deps.store.get(ACTIVITY);
     if (Array.isArray(activity)) veil.load_activity(JSON.stringify(activity));
-    this.lastPurge = deps.now();
-    veil.purge_expired();
+    // Loading reports nothing new; this keeps the order of saves simple.
     await this.saveVault(veil);
     return veil;
   }
@@ -88,11 +87,11 @@ export class LocalEngine {
     return ((await this.deps.store.get(RULES)) as RulesFile | undefined) ?? DEFAULT_RULES;
   }
 
-  /** Saves what changed in the vault; one save at a time, in order. */
+  /** Keeps what changed in the placeholders for the session; one save at a time, in order. */
   private saveVault(veil: LocalVeil): Promise<void> {
-    const changes = JSON.parse(veil.take_vault_changes()) as VaultEntry[];
+    const changes = JSON.parse(veil.take_vault_changes()) as MemoryEntry[];
     if (changes.length === 0) return this.saving;
-    this.saving = this.saving.then(() => this.deps.vault.save(changes));
+    this.saving = this.saving.then(() => this.deps.memory.save(changes));
     return this.saving;
   }
 
@@ -106,10 +105,6 @@ export class LocalEngine {
     try {
       const veil = await this.veil();
       veil.set_now(this.deps.now());
-      if (this.deps.now() - this.lastPurge > HOUR) {
-        this.lastPurge = this.deps.now();
-        veil.purge_expired();
-      }
       const result = JSON.parse(veil.handle(op, JSON.stringify(payload ?? {}))) as Record<string, unknown>;
       this.trackReply(op, payload, result);
       await this.saveVault(veil);
@@ -217,20 +212,20 @@ export class LocalEngine {
     return this.status();
   }
 
-  /** Forgets every saved value, here and in the browser's storage. */
+  /** Forgets the values behind placeholders now, before the browser closes. */
   async clearVault(): Promise<void> {
     const veil = await this.veil();
     veil.clear_vault();
     await this.saveVault(veil);
   }
 
-  /** Forgets everything the engine kept: values, activity, settings, rules and the vault key. */
+  /** Forgets everything the engine kept: values, activity, settings and rules. */
   async deleteEverything(): Promise<void> {
     const veil = await this.veil();
     veil.clear_vault();
     veil.take_vault_changes();
     await this.saving;
-    await this.deps.vault.destroy();
+    await this.deps.memory.destroy();
     for (const key of [CONFIG, RULES, ACTIVITY, LOCAL, 'paused']) await this.deps.store.remove(key);
     this.starting = null;
   }

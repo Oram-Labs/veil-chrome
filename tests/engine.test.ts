@@ -1,13 +1,11 @@
 // The built-in engine with the real WebAssembly: the package built by
 // `scripts/build-npm.sh` in veil-engine. Skipped without it.
 
-import 'fake-indexeddb/auto';
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { IDBFactory } from 'fake-indexeddb';
 import { describe, expect, it } from 'vitest';
 import { LocalEngine, type Store } from '../src/local/engine';
-import { BrowserVault } from '../src/local/vault';
+import { SessionMemory, type SessionArea } from '../src/local/memory';
 
 const dir = process.env.VEIL_ENGINE_DIR ?? join(__dirname, '../node_modules/veil-engine');
 const have = existsSync(join(dir, 'veil_engine_wasm_bg.wasm'));
@@ -31,8 +29,19 @@ async function wasm() {
   return mod;
 }
 
-function engine(store = memoryStore(), idb = new IDBFactory(), now = { t: 1_700_000_000_000 }) {
-  return { store, idb, now, engine: new LocalEngine({ wasm, store, vault: new BrowserVault(idb), now: () => now.t, version: '0.5.0' }) };
+/** A stand-in for chrome.storage.session. */
+function sessionArea(): SessionArea & { data: Map<string, unknown> } {
+  const data = new Map<string, unknown>();
+  return {
+    data,
+    get: async () => Object.fromEntries(data),
+    set: async (items) => void Object.entries(items).forEach(([k, v]) => data.set(k, structuredClone(v))),
+    remove: async (keys) => void [keys].flat().forEach((k) => data.delete(k)),
+  };
+}
+
+function engine(store = memoryStore(), session = sessionArea(), now = { t: 1_700_000_000_000 }) {
+  return { store, session, now, engine: new LocalEngine({ wasm, store, memory: new SessionMemory(session), now: () => now.t, version: '0.5.0' }) };
 }
 
 const send = (text: string, conversation = 'conv-1') => ({
@@ -60,66 +69,65 @@ describe.skipIf(!have)('the built-in engine', () => {
     expect(await e.available()).toBe(false);
   });
 
-  it('restores an old chat after the browser restarts, from the encrypted vault', async () => {
+  it('restores a chat after Chrome stops the service worker, but not after the browser restarts', async () => {
     const first = engine();
     const sent = await first.engine.ask<{ body: string }>('request', send('write to ana@example.com'));
     const body = JSON.parse(Buffer.from((sent as { result: { body: string } }).result.body, 'base64').toString());
     const text = body.messages[0].content.parts[0] as string;
     expect(text).toBe(`write to ${ph('EMAIL', 1)}`);
-    // Let the vault finish saving, then start over with only what is stored.
     await new Promise((r) => setTimeout(r, 20));
 
-    const second = engine(first.store, first.idb);
-    const load = await second.engine.ask<{ ticket: string }>('request', {
-      site: 'chatgpt.com',
-      method: 'GET',
-      path: '/backend-api/conversations/conv-1?num_turns=10',
-    });
-    const ticket = (load as { result: { ticket: string } }).result.ticket;
-    const page = JSON.stringify({ title: `Mail ${ph('EMAIL', 1)}`, mapping: { x: { message: { content: { parts: [text] } } } } });
-    const restored = await second.engine.ask<{ chunk: string }>('response', {
-      ticket,
-      chunk: Buffer.from(page).toString('base64'),
-      done: true,
-      status: 200,
-      content_type: 'application/json',
-    });
-    const out = JSON.parse(Buffer.from((restored as { result: { chunk: string } }).result.chunk, 'base64').toString());
-    expect(out.title).toBe('Mail ana@example.com');
-    expect(out.mapping.x.message.content.parts[0]).toBe('write to ana@example.com');
+    const reopen = async (e: LocalEngine) => {
+      const load = await e.ask<{ ticket: string }>('request', { site: 'chatgpt.com', method: 'GET', path: '/backend-api/conversations/conv-1' });
+      const page = JSON.stringify({ title: `Mail ${ph('EMAIL', 1)}`, mapping: { x: { message: { content: { parts: [text] } } } } });
+      const restored = await e.ask<{ chunk: string }>('response', {
+        ticket: (load as { result: { ticket: string } }).result.ticket,
+        chunk: Buffer.from(page).toString('base64'),
+        done: true,
+        status: 200,
+        content_type: 'application/json',
+      });
+      return JSON.parse(Buffer.from((restored as { result: { chunk: string } }).result.chunk, 'base64').toString());
+    };
+    // The same session, a new service worker: the values are still there.
+    const sameSession = engine(first.store, first.session);
+    expect((await reopen(sameSession.engine)).title).toBe('Mail ana@example.com');
+    // A new browser session: the session storage is empty, the placeholders stay.
+    const nextSession = engine(first.store);
+    expect((await reopen(nextSession.engine)).title).toBe(`Mail ${ph('EMAIL', 1)}`);
   });
 
-  it('never stores a value in the clear', async () => {
-    const { engine: e, idb, store } = engine();
+  it('keeps values only in the session storage, never in the storage that is written to disk', async () => {
+    const { engine: e, session, store } = engine();
     await e.ask('request', send('mail ana.popescu@example.com'));
     await new Promise((r) => setTimeout(r, 1200));
     expect(JSON.stringify([...store.data])).not.toContain('ana.popescu');
-    const names = await (idb as unknown as { databases(): Promise<{ name: string }[]> }).databases();
-    expect(names.map((n) => n.name)).toContain('veil');
+    expect(JSON.stringify([...session.data])).toContain('ana.popescu');
   });
 
-  it('deletes everything it keeps', async () => {
-    const { engine: e, store, idb } = engine();
-    await e.patchConfig({ behavior: { mode: 'audit' } } as never);
+  it('forgets values now when asked, and deletes everything it keeps', async () => {
+    const { engine: e, store, session } = engine();
+    await e.patchConfig({ behavior: { fail_closed: false } } as never);
     await e.ask('request', send('mail ana@example.com'));
     await new Promise((r) => setTimeout(r, 1200));
+    await e.clearVault();
+    expect(JSON.stringify([...session.data])).not.toContain('ana@example.com');
     await e.deleteEverything();
     expect([...store.data.keys()]).toEqual([]);
-    expect(await new BrowserVault(idb).loadAll()).toEqual([]);
+    expect([...session.data.keys()].filter((k) => k.startsWith('m:'))).toEqual([]);
     expect(await e.available()).toBe(true);
   });
 
-  it('keeps settings and rules it was given, and refuses rules that do not compile', async () => {
-    const { engine: e, store } = engine();
-    await e.patchConfig({ behavior: { fail_closed: false } } as never);
-    expect((await e.config()).settings.behavior.fail_closed).toBe(false);
+  it('runs the built-in detectors only, and refuses settings it can\'t use', async () => {
+    const { engine: e } = engine();
     const view = await e.rulesView();
     await e.putRules({ ...view.rules, dictionary: [{ term: 'Project Halcyon', type: 'CODENAME', match_case: false }] });
-    const test = await e.testRules({ text: 'about project halcyon', rules: null });
-    expect(test.redacted).toBe(`about ${ph('CODENAME', 1)}`);
-    await expect(e.putRules({ ...view.rules, regex: [{ name: 'bad', type: 'X', pattern: '(' }] })).rejects.toThrow();
-    expect((await e.rulesView()).rules.regex).toEqual([]);
-    expect(store.data.get('rules')).toBeTruthy();
+    const test = await e.testRules({ text: 'about project halcyon, ana@example.com', rules: null });
+    expect(test.redacted).toBe(`about project halcyon, ${ph('EMAIL', 1)}`);
+    await expect(e.patchConfig({ behavior: { placeholder_format: 'no type' } } as never)).rejects.toThrow();
+    expect((await e.config()).settings.behavior.placeholder_format).not.toBe('no type');
+    await e.patchConfig({ behavior: { fail_closed: false } } as never);
+    expect((await e.config()).settings.behavior.fail_closed).toBe(false);
   });
 
   it('counts what it did today, for the dashboard', async () => {

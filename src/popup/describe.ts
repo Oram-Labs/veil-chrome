@@ -81,7 +81,7 @@ export function describe(status: Answer<VeilStatus>, site: Site | null, count: n
     siteState: siteOn ? mode.state : 'Off in Veil',
     count: count_text,
     help: builtIn
-      ? "Using the extension's built-in engine, because the Veil app isn't running. Attached files and names are redacted by the Veil app. Open the extension's settings to change what the built-in engine does."
+      ? "Using the extension's built-in engine, because the Veil app isn't running. It remembers real values only while the browser is open. Your own terms, attached files and names are redacted by the Veil app."
       : site
         ? `Veil ${s.version}. Choose protected sites in Veil, under Client setup.`
         : 'Open claude.ai or chatgpt.com to see this site.',

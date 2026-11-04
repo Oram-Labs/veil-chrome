@@ -1,14 +1,14 @@
 // End to end for the built-in engine: Chromium with the extension, no Veil
 // app (no native host is registered), and local stand-ins for claude.ai and
 // chatgpt.com. Checks that the extension redacts and restores by itself,
-// leaves attached files to the app, keeps working after the browser restarts,
-// forgets everything on request, and keeps a chat with the engine that
-// started it when the app appears.
+// leaves attached files to the app, remembers real values only for the
+// browser session and never on disk, forgets everything on request, and keeps
+// a chat with the engine that started it when the app appears.
 //
 // The extension is built here, with the installed engine package or the one
 // VEIL_ENGINE_DIR points at.
 
-import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -148,12 +148,49 @@ test('attached files are left to the app: sent as they are with a notice, or hel
   await again.close();
 });
 
-test('after the browser restarts, a chat made before still shows real values', async () => {
+test('when Chrome stops the service worker, a chat still shows real values', async () => {
+  const page = await context.newPage();
+  await page.goto(`https://chatgpt.com/c/${CHAT_ID}`);
+  const cdp = await context.newCDPSession(page);
+  await cdp.send('ServiceWorker.enable');
+  await cdp.send('ServiceWorker.stopAllWorkers');
+  await page.reload();
+  await expect(page.locator('#ssr')).toHaveText(`Call me at ${PHONE} or write to ${EMAIL}`, { timeout: 15_000 });
+  await page.close();
+});
+
+/** Every file of the profile that belongs to the extension, as text. */
+function extensionFiles(): string[] {
+  const out: string[] = [];
+  const walk = (dir: string) => {
+    for (const name of readdirSync(dir)) {
+      const path = join(dir, name);
+      if (statSync(path).isDirectory()) walk(path);
+      else if (path.includes(EXTENSION_ID)) out.push(path);
+    }
+  };
+  walk(profile);
+  return out;
+}
+
+test('nothing the built-in engine keeps on disk holds a real value, and a new browser session shows placeholders', async () => {
   await context.close();
+  const files = extensionFiles();
+  expect(files.length).toBeGreaterThan(0);
+  for (const file of files) {
+    const bytes = readFileSync(file);
+    for (const needle of [EMAIL, '721 234 567']) {
+      expect(bytes.includes(Buffer.from(needle)), `${file} holds ${needle}`).toBe(false);
+      expect(bytes.includes(Buffer.from(needle, 'utf16le')), `${file} holds ${needle}`).toBe(false);
+    }
+  }
+  expect(files.some((f) => f.includes('IndexedDB'))).toBe(false);
+
   context = await launch();
   const page = await context.newPage();
   await page.goto(`https://chatgpt.com/c/${CHAT_ID}`);
-  await expect(page.locator('#ssr')).toHaveText(`Call me at ${PHONE} or write to ${EMAIL}`, { timeout: 15_000 });
+  await expect(page.locator('#ssr')).toContainText('[EMAIL_1]', { timeout: 15_000 });
+  await expect(page.locator('#ssr')).not.toContainText(EMAIL);
   await page.close();
 });
 
@@ -163,6 +200,9 @@ test('the settings page shows what it did today, and the rules apply at once', a
   await page.goto(`chrome-extension://${EXTENSION_ID}/options.html#/playground`);
   await page.locator('#input').fill(`write to ${EMAIL}`);
   await expect(page.getByText('[EMAIL_1]').first()).toBeVisible({ timeout: 15_000 });
+  await page.goto(`chrome-extension://${EXTENSION_ID}/options.html#/rules`);
+  await expect(page.getByText('Built-in detectors')).toBeVisible();
+  await expect(page.getByText('Custom dictionary')).toHaveCount(0);
   await page.close();
 });
 

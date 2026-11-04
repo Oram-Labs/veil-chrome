@@ -6,7 +6,7 @@
 // off in the extension's settings (router.ts).
 
 import { LocalEngine, type Store } from './local/engine';
-import { BrowserVault } from './local/vault';
+import { SessionMemory } from './local/memory';
 import { NativeLink, type PortLike } from './native';
 import { HOST_NAME, type Ask, type StatusAsk } from './protocol';
 import { makeRouter, type Engine, type Pins } from './router';
@@ -29,28 +29,31 @@ const engine = new LocalEngine({
     return wasm;
   },
   store,
-  vault: new BrowserVault(),
+  memory: new SessionMemory(chrome.storage.session),
   now: () => Date.now(),
   // Any extension call resets the worker's idle timer.
   keepAlive: () => void chrome.runtime.getPlatformInfo(),
   version: chrome.runtime.getManifest().version,
 });
 
-/** Which engine each chat uses: the most recent few hundred, kept in the browser. */
+/**
+ * Which engine each chat uses: the most recent few hundred, for the browser
+ * session, like the built-in engine's placeholders.
+ */
 const MAX_PINS = 500;
 const pins: Pins = {
   async get(key) {
-    const all = ((await chrome.storage.local.get('pins')).pins ?? {}) as Record<string, [Engine, number]>;
+    const all = ((await chrome.storage.session.get('pins')).pins ?? {}) as Record<string, [Engine, number]>;
     return all[key]?.[0];
   },
   async set(key, value) {
-    const all = ((await chrome.storage.local.get('pins')).pins ?? {}) as Record<string, [Engine, number]>;
+    const all = ((await chrome.storage.session.get('pins')).pins ?? {}) as Record<string, [Engine, number]>;
     all[key] = [value, Date.now()];
     const keys = Object.keys(all);
     if (keys.length > MAX_PINS) {
       for (const old of keys.sort((a, b) => all[a]![1] - all[b]![1]).slice(0, keys.length - MAX_PINS)) delete all[old];
     }
-    await chrome.storage.local.set({ pins: all });
+    await chrome.storage.session.set({ pins: all });
   },
 };
 

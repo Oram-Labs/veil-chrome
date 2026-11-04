@@ -105,10 +105,10 @@ describe('storage', () => {
       // The built-in engine's store: `store.set(key, value)` below says which keys.
       'background.ts: chrome.storage.local.remove(key)',
       'background.ts: chrome.storage.local.set({ [key]: value })',
-      // Which engine each chat used, by the chat's id.
-      'background.ts: chrome.storage.local.set({ pins: all })',
       'background.ts: chrome.storage.session.remove(`count:${tab}`)',
       'background.ts: chrome.storage.session.set({ [key]: total })',
+      // Which engine each chat used, by the chat's id, for the session.
+      'background.ts: chrome.storage.session.set({ pins: all })',
       'popup/popup.ts: chrome.storage.local.set({ prefs: next })',
       'popup/update.ts: chrome.storage.local.set({ latest: { at: now, data: parseLatest(data)',
     ]);
@@ -126,13 +126,11 @@ describe('storage', () => {
     ].sort());
   });
 
-  it('keeps the values behind placeholders only encrypted, in IndexedDB', () => {
-    expect(found(/\b(localStorage|sessionStorage)\b/g)).toEqual([]);
-    expect(found(/indexedDB|IDBFactory/g)).toEqual(['local/vault.ts: IDBFactory', 'local/vault.ts: indexedDB']);
-    // The key is made not extractable: no script can read its bytes.
-    expect(found(/crypto\.subtle\.generateKey\([^)]*\)\)?/g)).toEqual([
-      "local/vault.ts: crypto.subtle.generateKey({ name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt'])",
-    ]);
+  it('keeps the values behind placeholders only in the session storage, which Chrome holds in memory', () => {
+    expect(found(/\b(localStorage|sessionStorage|indexedDB|IDBFactory|caches\.open)\b/g)).toEqual([]);
+    expect(found(/new SessionMemory\([^)]*\)/g)).toEqual(['background.ts: new SessionMemory(chrome.storage.session)']);
+    // Session storage isn't readable from the sites' pages (Chrome's default access level).
+    expect(found(/setAccessLevel/g)).toEqual([]);
   });
 });
 

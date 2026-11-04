@@ -129,4 +129,5 @@ Without the app, the extension answers `status`, `request`, `response`, `documen
 - `document` never reads the file: it answers as the app does for a file it can't read, as `behavior.unsupported_content` says (`pass` with a message, or `block`).
 - Reply tickets are marked `local:` so the reply's chunks come back to the engine that made them.
 - `observe` answers `{"written": false}` and `open` isn't answered.
-- A message in a chat that the app started is blocked, with a message saying so, while the app can't be reached, and the other way round. Which engine a chat used is kept by the chat's id.
+- A message in a chat that the app started is blocked, with a message saying so, while the app can't be reached, and the other way round. Which engine a chat used is kept by the chat's id, for the browser session.
+- It runs the engine's built-in detectors only: dictionary terms and regex rules are the app's. It remembers placeholders for the browser session only.

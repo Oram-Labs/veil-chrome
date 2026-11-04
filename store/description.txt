@@ -29,7 +29,7 @@ AT A GLANCE
 The toolbar button shows whether the current site is protected and how many values were hidden in the tab.
 
 FREE BUILT-IN ENGINE, OR THE VEIL APP
-The extension works on its own, for free: its built-in engine hides emails, phone numbers, cards, IBANs, API keys, IP addresses, national IDs and your own terms. The Veil app for Mac, Windows or Linux adds attached documents, name detection and protection for desktop apps and developer tools; when it is running, the extension uses it. Supported sites: claude.ai and chatgpt.com.
+The extension works on its own, for free: its built-in engine hides emails, phone numbers, cards, IBANs, API keys, IP addresses and national IDs, and remembers the real values only while your browser is open, never on disk. The Veil app for Mac, Windows or Linux adds your own terms and patterns, attached documents, name detection, values remembered for good (encrypted), and protection for desktop apps and developer tools; when it is running, the extension uses it. Supported sites: claude.ai and chatgpt.com.
 
 PRIVACY
 What you type goes only to the Veil app on your computer, or stays in the extension's own engine. The extension's only request of its own reads a version file from getveil.tech, to tell you when a newer Veil is out. It has no analytics or tracking, and it does not collect or sell your data.

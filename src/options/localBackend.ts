@@ -1,7 +1,7 @@
 // The settings screens' host: the built-in engine in the service worker,
 // reached with messages. The screens are the Veil app's (veil-ui).
 
-import type { Backend, DictionaryImport, DictionaryImportResult, RulesFile, RulesView, ScreenName } from 'veil-ui';
+import type { Backend, RulesView, ScreenName } from 'veil-ui';
 
 async function call<T>(method: string, ...args: unknown[]): Promise<T> {
   const answer: { ok: boolean; result?: T; error?: string } | undefined = await chrome.runtime.sendMessage({
@@ -14,21 +14,6 @@ async function call<T>(method: string, ...args: unknown[]): Promise<T> {
 
 const notHere = (what: string) => () => Promise.reject(new Error(`${what} is in the Veil app.`));
 
-/** Terms from a list: one per line, or CSV with the term first and its type second. */
-function terms(text: string, format: DictionaryImport['format'], type: string): { term: string; type: string }[] {
-  if (format === 'yaml') throw new Error('Import a plain list (one term per line) or a CSV file.');
-  return text
-    .split(/\r?\n/)
-    .map((line) => line.trim())
-    .filter((line) => line && !line.startsWith('#'))
-    .map((line) => {
-      if (format !== 'csv') return { term: line, type };
-      const [term = '', kind] = line.split(/[,\t;]/).map((c) => c.trim().replace(/^"|"$/g, ''));
-      return { term, type: kind || type };
-    })
-    .filter((e) => e.term);
-}
-
 export const localBackend: Backend = {
   capabilities: {
     nameDetection: false,
@@ -39,49 +24,16 @@ export const localBackend: Backend = {
     appSettings: false,
     vaultStorage: false,
     license: false,
+    customRules: false,
   },
   status: () => call('status'),
   config: () => call('config'),
   patchConfig: (patch) => call('patchConfig', patch),
   rules: () => call('rules'),
   putRules: (rules) => call('putRules', rules),
-  async importRules(text: string, replace: boolean): Promise<RulesView> {
-    let incoming: RulesFile;
-    try {
-      incoming = JSON.parse(text) as RulesFile;
-    } catch {
-      throw new Error('Only a rules file saved as JSON can be imported here.');
-    }
-    if (replace) return call('putRules', incoming);
-    const current = (await call<RulesView>('rules')).rules;
-    return call('putRules', {
-      ...current,
-      dictionary: [...current.dictionary, ...(incoming.dictionary ?? [])],
-      regex: [...current.regex, ...(incoming.regex ?? [])],
-      allowlist: [...new Set([...current.allowlist, ...(incoming.allowlist ?? [])])],
-    });
-  },
-  async importDictionary(req: DictionaryImport): Promise<DictionaryImportResult> {
-    const current = (await call<RulesView>('rules')).rules;
-    const base = req.replace ? [] : current.dictionary;
-    const have = new Set(base.map((e) => `${e.match_case ? e.term : e.term.toLowerCase()}|${e.type}`));
-    let added = 0;
-    let skipped = 0;
-    const dictionary = [...base];
-    for (const { term, type } of terms(req.text, req.format, req.type)) {
-      const key = `${req.match_case ? term : term.toLowerCase()}|${type.toUpperCase()}`;
-      if (have.has(key)) {
-        skipped++;
-        continue;
-      }
-      have.add(key);
-      dictionary.push({ term, type: type.toUpperCase(), match_case: req.match_case });
-      added++;
-    }
-    return { rules: await call<RulesView>('putRules', { ...current, dictionary }), added, skipped };
-  },
+  importRules: notHere('Importing rules'),
+  importDictionary: notHere('The custom dictionary'),
   async exportRules() {
-    // JSON is YAML too, so the Veil app reads this file as it is.
     return JSON.stringify((await call<RulesView>('rules')).rules, null, 2);
   },
   testRules: (req) => call('testRules', req),
@@ -143,6 +95,7 @@ export const localBackend: Backend = {
 
 /** What the page asks of the built-in engine beyond the screens. */
 export const engine = {
+  forgetValues: () => call<void>('clearVault'),
   enabled: () => call<boolean>('enabled'),
   setEnabled: (on: boolean) => call<void>('setEnabled', on),
   deleteEverything: () => call<void>('deleteEverything'),
