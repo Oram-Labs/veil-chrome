@@ -1,7 +1,7 @@
 <script lang="ts">
   // What the built-in engine did today, and the few things only the
   // extension has: using it, and deleting everything it keeps.
-  import { app, count, toast } from 'veil-ui';
+  import { app, count, SettingRow, Switch, toast } from 'veil-ui';
   import { engine } from './localBackend';
 
   let enabled = $state(true);
@@ -11,8 +11,8 @@
     void engine.enabled().then((v) => (enabled = v));
   });
 
-  async function toggle(e: Event & { currentTarget: HTMLInputElement }) {
-    enabled = e.currentTarget.checked;
+  async function toggle(on: boolean) {
+    enabled = on;
     await engine.setEnabled(enabled);
     toast.ok(enabled ? 'The built-in engine is used when the Veil app isn\'t running' : 'The built-in engine is off: messages wait for the Veil app');
   }
@@ -44,13 +44,13 @@
   </section>
 
   <section class="card rows">
-    <div class="row">
-      <div>
-        <h2>Use the built-in engine</h2>
-        <p class="hint">When the Veil app isn't running, the extension redacts with its own engine. Turn off to make messages wait for the app instead.</p>
-      </div>
-      <input type="checkbox" role="switch" checked={enabled} onchange={toggle} aria-label="Use the built-in engine" />
-    </div>
+    <SettingRow
+      label="Use the built-in engine"
+      desc="When the Veil app isn't running, the extension redacts with its own engine. Turn off to make messages wait for the app instead."
+      last
+    >
+      <Switch checked={enabled} label="Use the built-in engine" onchange={toggle} />
+    </SettingRow>
   </section>
 
   <section class="card">
@@ -61,12 +61,6 @@
 </div>
 
 <style>
-  .row {
-    display: flex;
-    justify-content: space-between;
-    gap: 16px;
-    align-items: flex-start;
-  }
   h2 {
     margin: 0 0 6px;
   }
