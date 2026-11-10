@@ -30,6 +30,17 @@ const FALLBACK: DocumentsView = {
       mime_types: ['application/vnd.openxmlformats-officedocument.wordprocessingml.document'],
     },
     {
+      id: 'pptx',
+      name: 'PowerPoint',
+      extensions: ['pptx', 'pptm', 'ppsx', 'ppsm'],
+      mime_types: [
+        'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+        'application/vnd.openxmlformats-officedocument.presentationml.slideshow',
+        'application/vnd.ms-powerpoint.presentation.macroEnabled.12',
+        'application/vnd.ms-powerpoint.slideshow.macroEnabled.12',
+      ],
+    },
+    {
       id: 'xlsx',
       name: 'Excel',
       extensions: ['xlsx', 'xlsm'],
