@@ -71,7 +71,16 @@ import { interesting } from './sites';
   const docs = new Documents(site, channel, notices, status.then((a) => (a.ok ? a.result.documents : undefined)));
   // How each document reached the page goes into the capture, so a site
   // that ignores Veil's file can be seen.
-  catchFiles(window, docs, (how, detail) => report({ site, kind: 'veil_document', detail: { how, ...detail } }));
+  catchFiles(
+    window,
+    docs,
+    (how, detail) => report({ site, kind: 'veil_document', detail: { how, ...detail } }),
+    (names) =>
+      notices.blocked(
+        `The page didn't take the redacted ${names.length === 1 ? 'file' : 'files'} (${names.join(', ')}). ` +
+          'Attach the original again with the attach button.',
+      ),
+  );
   // XHR can't wait for the answer, so it uses the last one.
   let unprotected = false;
   const allow = async () => (unprotected = await channel.allowUnprotected());

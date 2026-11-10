@@ -6,8 +6,11 @@
 //
 // Reading takes a moment, and the page may have moved on by then: claude.ai
 // takes files from an input inside a menu that closes once a file is
-// picked. When the input is gone, and for drops, Veil's files are pasted
-// into the chat box instead, which both sites accept from a script.
+// picked. When the input is gone, and for drops, Veil's files go into the
+// page's own file input if it keeps one (claude.ai does, and takes files
+// set on it from a script), or are pasted into the chat box. claude.ai
+// ignores files pasted from a script, so a paste the page doesn't take is
+// reported, never assumed to have worked.
 
 import type { Documents } from './documents';
 
@@ -38,30 +41,87 @@ export function composer(doc: Document): HTMLElement | null {
   return found instanceof HTMLElement ? found : null;
 }
 
+/** Pastes `files` at `at`. True if the page took them (it cancels the paste). */
 function paste(at: EventTarget, files: File[]): boolean {
   const event = new ClipboardEvent('paste', { bubbles: true, cancelable: true, composed: true, clipboardData: transfer(files) });
   ours.add(event);
-  at.dispatchEvent(event);
-  return true;
+  return !at.dispatchEvent(event);
+}
+
+/** True if a file input's `accept` lets `file` in. */
+function accepts(input: HTMLInputElement, file: File): boolean {
+  const accept = input.accept.trim();
+  if (!accept) return true;
+  const name = file.name.toLowerCase();
+  const type = file.type.toLowerCase();
+  return accept.split(',').some((raw) => {
+    const a = raw.trim().toLowerCase();
+    if (!a) return false;
+    if (a.startsWith('.')) return name.endsWith(a);
+    if (a.endsWith('/*')) return type.startsWith(a.slice(0, -1));
+    return a === type;
+  });
+}
+
+/**
+ * The page's own file input that can take `files`: claude.ai's is marked
+ * `file-upload`; otherwise the first enabled one that accepts them all.
+ */
+export function fileInput(doc: Document, files: File[]): HTMLInputElement | null {
+  const all = [...doc.querySelectorAll('input[type="file"]')].filter(
+    (i): i is HTMLInputElement =>
+      i instanceof HTMLInputElement && !i.disabled && (files.length < 2 || i.multiple) && files.every((f) => accepts(i, f)),
+  );
+  return all.find((i) => i.dataset.testid === 'file-upload') ?? all[0] ?? null;
+}
+
+/** Sets `files` on a file input and tells the page, as a pick would. */
+function fill(input: HTMLInputElement, files: File[]): void {
+  input.files = transfer(files).files;
+  for (const type of ['input', 'change']) {
+    const again = new Event(type, { bubbles: true });
+    ours.add(again);
+    input.dispatchEvent(again);
+  }
 }
 
 function connected(at: EventTarget | null): at is Node {
   return at instanceof Node && at.isConnected;
 }
 
-export function catchFiles(target: Window, docs: Documents, delivered: Delivered = () => {}): void {
+/**
+ * Catches documents on `target`. `lost` is told the names of files Veil
+ * made that the page didn't take, so the user can attach them again.
+ */
+export function catchFiles(
+  target: Window,
+  docs: Documents,
+  delivered: Delivered = () => {},
+  lost: (names: string[]) => void = () => {},
+): void {
   const doc = target.document;
 
-  /** Pastes into the chat box when the page's own target is gone. */
+  /**
+   * Hands Veil's files to the page when its own target is gone: through
+   * its file input, or else pasted into the chat box.
+   */
   const fallback = (files: File[], why: string) => {
-    const box = composer(doc);
-    if (!box) {
-      delivered('lost', { why, files: files.length });
+    const input = fileInput(doc, files);
+    if (input) {
+      fill(input, files);
+      delivered('file_input', { why, files: files.length });
       return;
     }
-    box.focus();
-    paste(box, files);
-    delivered('pasted', { why, files: files.length, into: box.tagName.toLowerCase() });
+    const box = composer(doc);
+    if (box) {
+      box.focus();
+      if (paste(box, files)) {
+        delivered('pasted', { why, files: files.length, into: box.tagName.toLowerCase() });
+        return;
+      }
+    }
+    delivered('lost', { why, files: files.length, box: box !== null });
+    lost(files.map((f) => f.name));
   };
 
   // A file input: `input` and then `change` fire once the user has picked.
@@ -82,12 +142,7 @@ export function catchFiles(target: Window, docs: Documents, delivered: Delivered
         fallback(out, 'input_removed');
         return;
       }
-      input.files = transfer(out).files;
-      for (const type of ['input', 'change']) {
-        const again = new Event(type, { bubbles: true });
-        ours.add(again);
-        input.dispatchEvent(again);
-      }
+      fill(input, out);
       delivered('input', { files: out.length });
     });
   };
@@ -134,11 +189,10 @@ export function catchFiles(target: Window, docs: Documents, delivered: Delivered
       const at = event.composedPath()[0] ?? event.target;
       void docs.transform(files).then((out) => {
         if (out.length === 0) return;
-        if (!connected(at)) {
-          fallback(out, 'paste_target_removed');
+        if (!connected(at) || !paste(at, out)) {
+          fallback(out, connected(at) ? 'paste_ignored' : 'paste_target_removed');
           return;
         }
-        paste(at, out);
         delivered('paste', { files: out.length });
       });
     },
