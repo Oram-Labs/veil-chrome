@@ -24,6 +24,18 @@ const FALLBACK: DocumentsView = {
   formats: [
     { id: 'pdf', name: 'PDF', extensions: ['pdf'], mime_types: ['application/pdf'] },
     {
+      id: 'docx',
+      name: 'Word',
+      extensions: ['docx'],
+      mime_types: ['application/vnd.openxmlformats-officedocument.wordprocessingml.document'],
+    },
+    {
+      id: 'xlsx',
+      name: 'Excel',
+      extensions: ['xlsx', 'xlsm'],
+      mime_types: ['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'application/vnd.ms-excel.sheet.macroEnabled.12'],
+    },
+    {
       id: 'text',
       name: 'Text',
       extensions: ['txt', 'md', 'markdown', 'csv', 'tsv', 'json', 'jsonl', 'yaml', 'yml', 'toml', 'xml', 'html', 'log', 'sql', 'env', 'ini', 'conf', 'cfg', 'properties', 'js', 'ts', 'py', 'java', 'go', 'rs', 'rb', 'php', 'cs', 'c', 'cpp', 'h', 'sh'],

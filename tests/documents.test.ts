@@ -213,8 +213,11 @@ describe('Documents', () => {
       counted: () => {},
     };
     const docs = new Documents('chatgpt.com', channel, { info: () => {}, blocked: () => {} }, Promise.resolve(undefined), () => '/');
-    // Until then, PDFs are still caught.
+    // Until then, PDFs, Word and Excel files are still caught.
     expect(docs.wants([pdf()])).toBe(true);
+    expect(docs.wants([new File(['x'], 'Offer.docx')])).toBe(true);
+    expect(docs.wants([new File(['x'], 'Budget.XLSX')])).toBe(true);
+    expect(docs.wants([new File(['x'], 'photo.png')])).toBe(false);
     await docs.transform([pdf()]);
     expect(asked).toEqual(['status', 'document']);
   });
