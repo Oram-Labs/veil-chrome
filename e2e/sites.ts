@@ -44,7 +44,7 @@ const page = (site: string) => `<!doctype html>
   <button id="send">Send</button>
   <pre id="reply"></pre>
   <pre id="status"></pre>
-  <input type="file" id="file" multiple>
+  <input type="file" id="file" data-testid="file-upload" multiple>
   <div id="menu"><input type="file" id="menu-file"></div>
   <button id="sneak">Upload a PDF made by the page</button>
   <div id="drop" style="width:200px;height:80px;border:1px dashed">Drop files here</div>
@@ -60,8 +60,10 @@ const page = (site: string) => `<!doctype html>
         uploaded(f.name + ' ' + r.status);
       }
     });
-    // As claude.ai does: files pasted into the chat box are uploaded too.
+    // As claude.ai does: files pasted into the chat box are uploaded too,
+    // but only from a real paste; a paste made by a script is ignored.
     document.getElementById('box').addEventListener('paste', async (e) => {
+      if (!e.isTrusted) return;
       for (const f of e.clipboardData.files) {
         e.preventDefault();
         const form = new FormData();
