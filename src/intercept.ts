@@ -34,6 +34,9 @@ export function failureMessage(error: Failure): string {
       return "Veil isn't running, so this message was not sent. Open Veil and try again.";
     case 'timeout':
       return "Veil didn't answer in time, so this message was not sent. Try again.";
+    case 'no_extension':
+      // The extension was updated, reloaded or turned off since the page loaded.
+      return 'The Veil extension was updated or reloaded since this page opened, so this message was not sent. Reload the page and try again.';
     default:
       return "Veil couldn't check this message, so it was not sent. Open Veil to see what's wrong.";
   }

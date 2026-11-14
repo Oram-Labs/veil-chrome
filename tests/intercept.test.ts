@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { wrapFetch, type Channel } from '../src/intercept';
+import { failureMessage, wrapFetch, type Channel } from '../src/intercept';
 import { fromBase64, toBase64, type Answer, type Decision, type Op } from '../src/protocol';
 
 const enc = new TextEncoder();
@@ -183,5 +183,9 @@ describe('wrapFetch', () => {
     const last = asked.filter((a) => a.op === 'response').at(-1)!.payload;
     expect(last).toMatchObject({ ticket: 't', done: true, error: 'aborted_by_page' });
   });
-});
 
+  it('asks for a reload when the page lost the extension', () => {
+    expect(failureMessage('no_extension')).toContain('Reload the page');
+    expect(failureMessage('something_else')).toContain('Open Veil');
+  });
+});
