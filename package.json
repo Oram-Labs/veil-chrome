@@ -23,6 +23,6 @@
   },
   "dependencies": {
     "veil-engine": "file:vendor/veil-engine-0.2.1.tgz",
-    "veil-ui": "file:vendor/veil-ui-0.1.3.tgz"
+    "veil-ui": "file:vendor/veil-ui-0.1.5.tgz"
   }
 }

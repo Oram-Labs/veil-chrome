@@ -30,7 +30,8 @@ export const DEFAULT_SETTINGS: Settings = {
     "enabled": true,
     "max_mb": 25,
     "max_pages": 100,
-    "timeout_secs": 15
+    "timeout_secs": 15,
+    "types": {}
   },
   "providers": {
     "anthropic": {
@@ -87,7 +88,8 @@ export const DEFAULT_SETTINGS: Settings = {
   },
   "web": {
     "claude_ai": true,
-    "chatgpt_com": true
+    "chatgpt_com": true,
+    "gemini": true
   }
 };
 
