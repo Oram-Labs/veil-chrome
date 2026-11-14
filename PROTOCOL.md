@@ -18,11 +18,11 @@ Bodies and chunks are bytes, sent as base64.
 
 ### `status`
 
-Asked when a page on claude.ai or chatgpt.com loads, and by the popup. The payload says which version of the extension asks, `{"extension": "0.2.0"}`; the app shows it on its General screen and keeps nothing else from it.
+Asked when a page on claude.ai, chatgpt.com or gemini.google.com loads, and by the popup. The payload says which version of the extension asks, `{"extension": "0.2.0"}`; the app shows it on its General screen and keeps nothing else from it.
 
 ```json
 { "version": "0.1.23", "running": true, "activated": true, "mode": "redact",
-  "fail_closed": true, "sites": { "claude.ai": true, "chatgpt.com": true }, "capture": false,
+  "fail_closed": true, "sites": { "claude.ai": true, "chatgpt.com": true, "gemini.google.com": true }, "capture": false,
   "documents": { "enabled": true, "max_mb": 25,
     "formats": [
       { "id": "pdf", "name": "PDF", "extensions": ["pdf"], "mime_types": ["application/pdf"], "guard": true },
@@ -39,7 +39,7 @@ A request the page is about to send. Sent only for requests that match `src/site
 { "site": "chatgpt.com", "method": "POST", "path": "/backend-api/f/conversation", "body": "<base64>" }
 ```
 
-`body` is absent for `GET`. A request that sends text also says which documents were attached before it, when there were any: `draft`, the page's draft id (see `document`), and `veil_files`, how many of the files uploaded since the last send were Veil's redacted text, so Veil doesn't count them as files it couldn't check. The reply is a decision:
+`body` is absent for `GET`. `page` is the page's path, which names the chat once it has started (Gemini's sends don't name their chat). `host` is there when the request goes to another host than the page's: Gemini's chats go to `geminiweb-pa.clients6.google.com`. An app from before `gemini.google.com` was added leaves it out of `sites`, and passes its requests as they are. A request that sends text also says which documents were attached before it, when there were any: `draft`, the page's draft id (see `document`), and `veil_files`, how many of the files uploaded since the last send were Veil's redacted text, so Veil doesn't count them as files it couldn't check. The reply is a decision:
 
 ```json
 { "action": "rewrite", "body": "<base64>", "ticket": "…", "redacted": 2 }

@@ -11,7 +11,8 @@ import { wrapFetch, type Channel } from './intercept';
 import { gated, observeFetch, observePage } from './observe';
 import { hookPageData } from './pagedata';
 import { siteOf, type Answer, type Op, type VeilStatus } from './protocol';
-import { interesting } from './sites';
+import { interesting, isGeminiChat } from './sites';
+import { chatXhr } from './xhr';
 
 (() => {
   const site = siteOf(location.hostname);
@@ -121,4 +122,9 @@ import { interesting } from './sites';
   Object.defineProperty(wrapped, 'name', { value: 'fetch' });
   Object.defineProperty(wrapped, 'toString', { value: () => 'function fetch() { [native code] }' });
   window.fetch = wrapped;
+
+  // Gemini sends chats by XMLHttpRequest; those go through the same fetch.
+  if (site === 'gemini.google.com') {
+    window.XMLHttpRequest = chatXhr(XMLHttpRequest, wrapped, isGeminiChat, () => location.href);
+  }
 })();

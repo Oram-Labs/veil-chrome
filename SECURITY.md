@@ -16,7 +16,7 @@ We aim to reply within a week, and will tell you when a fix is released. If you'
 
 Anything that breaks a promise in the [README](README.md#promises) or the [threat model](THREAT_MODEL.md). For example:
 
-- chat text on claude.ai or chatgpt.com reaching the site without going through Veil, while Veil is running and protecting that site;
+- chat text on claude.ai, chatgpt.com or gemini.google.com reaching the site without going through Veil, while Veil is running and protecting that site;
 - the extension sending anything anywhere other than the Veil app's native messaging host;
 - a web page or another extension getting the extension to act for it;
 - sends going through while Veil can't be reached and "send without protection" is off;

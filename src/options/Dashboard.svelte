@@ -34,7 +34,7 @@
 <div class="page">
   <div>
     <h1>Dashboard</h1>
-    <p class="sub">When the Veil app isn't running, the extension's built-in engine redacts emails, phone numbers, cards, IBANs, API keys, IP addresses and national ID numbers before claude.ai and chatgpt.com send them. It's free. It remembers the real values only while your browser is open: a chat from before the browser restarted shows its placeholders. Your own terms, attached files and names are redacted by the Veil app, which remembers values for good.</p>
+    <p class="sub">When the Veil app isn't running, the extension's built-in engine redacts emails, phone numbers, cards, IBANs, API keys, IP addresses and national ID numbers before claude.ai, chatgpt.com and gemini.google.com send them. It's free. It remembers the real values only while your browser is open: a chat from before the browser restarted shows its placeholders. Your own terms, attached files and names are redacted by the Veil app, which remembers values for good.</p>
   </div>
 
   <Upsell {appMissing} />

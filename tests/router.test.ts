@@ -44,6 +44,11 @@ describe('chat keys', () => {
     expect(chatKey('https://chatgpt.com/', 'chatgpt.com')).toBeNull();
     expect(chatKey('https://claude.ai/new', 'claude.ai')).toBeNull();
     expect(chatKey(undefined, 'claude.ai')).toBeNull();
+    expect(chatKey('https://gemini.google.com/app/b367dae10606cbcc', 'gemini.google.com')).toBe('gemini.google.com:b367dae10606cbcc');
+    expect(chatKey('https://gemini.google.com/gem/coding-partner/b367dae10606cbcc', 'gemini.google.com')).toBe(
+      'gemini.google.com:b367dae10606cbcc',
+    );
+    expect(chatKey('https://gemini.google.com/app', 'gemini.google.com')).toBeNull();
   });
 });
 

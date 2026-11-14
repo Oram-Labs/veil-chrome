@@ -41,7 +41,7 @@ export function describe(status: Answer<VeilStatus>, site: Site | null, count: n
     };
   }
   const s = status.result;
-  const siteOn = site ? s.sites[site] : false;
+  const siteOn = site ? s.sites[site] === true : false;
   const builtIn = s.engine === 'builtin';
   if (!s.running) {
     return {
@@ -84,7 +84,7 @@ export function describe(status: Answer<VeilStatus>, site: Site | null, count: n
       ? "Using the extension's built-in engine, because the Veil app isn't running. It remembers real values only while the browser is open. Your own terms, attached files and names are redacted by the Veil app."
       : site
         ? `Veil ${s.version}. Choose protected sites in Veil, under Client setup.`
-        : 'Open claude.ai or chatgpt.com to see this site.',
+        : 'Open claude.ai, chatgpt.com or gemini.google.com to see this site.',
     ...(builtIn
       ? {
           settings: 'Settings',

@@ -1,6 +1,6 @@
 # veil-chrome
 
-The browser extension of [Veil](https://getveil.tech). It keeps personal data and secrets out of what you type into **claude.ai** and **chatgpt.com**: before your message leaves the browser, Veil replaces values such as email addresses and phone numbers with placeholders like `[EMAIL_1]`, and shows the real values again in the reply, in reopened chats and in the sidebar. PDFs and text files you attach are attached as their text, with the same values replaced.
+The browser extension of [Veil](https://getveil.tech). It keeps personal data and secrets out of what you type into **claude.ai**, **chatgpt.com** and **gemini.google.com**: before your message leaves the browser, Veil replaces values such as email addresses and phone numbers with placeholders like `[EMAIL_1]`, and shows the real values again in the reply, in reopened chats and in the sidebar. PDFs and text files you attach are attached as their text, with the same values replaced.
 
 It runs in Chrome, Edge, Brave and other Chromium browsers. With the [Veil app](https://getveil.tech) on the same computer, the app does the work. Without it, the extension redacts with a free built-in engine of its own; attached files and names need the app.
 
@@ -15,7 +15,7 @@ the reply shows    I wrote to ana@example.com.
 The extension catches what the page is about to send, and the chat data the page receives, and has it redacted and restored by one of two engines. It asks the **Veil app** first, through Chrome's native messaging. Only if the app can't be reached (not installed, not running) does the **built-in engine** answer, unless you turned it off in the extension's settings.
 
 ```text
-claude.ai or chatgpt.com page  ──►  veil-chrome ──native messaging──►  Veil app on your computer
+chat page (claude.ai, …)        ──►  veil-chrome ──native messaging──►  Veil app on your computer
                                ◄──   (rewritten request, restored reply)   ◄──
                                          └─ no app? ──►  built-in engine, in this extension
 ```
@@ -30,12 +30,12 @@ A chat stays with the engine that started it, because only that engine knows wha
 Each of these is checked by a test (`tests/guarantees.test.ts`, `e2e/mock.spec.ts`, `e2e/local.spec.ts`):
 
 - **What you type goes only to the Veil app, or to the built-in engine inside the extension.** It reaches the app through the native messaging host `com.veil.app.native`; the built-in engine makes no network requests at all. The extension's one connection of its own is the popup reading `https://getveil.tech/download/latest.json`, at most every 6 hours, to say when a newer Veil or extension is out: a plain GET, without cookies, that carries nothing about you (`src/popup/update.ts`).
-- **It only wraps the page's own requests.** `fetch` goes through Veil first. `XMLHttpRequest`, `WebSocket` and `EventSource` are wrapped only to report traffic while "Capture traffic" is on in the app. On chatgpt.com it also passes the chat data built into a reloaded page through Veil.
+- **It only wraps the page's own requests.** `fetch` goes through Veil first. `XMLHttpRequest`, `WebSocket` and `EventSource` are wrapped only to report traffic while "Capture traffic" is on in the app. On chatgpt.com it also passes the chat data built into a reloaded page through Veil. On gemini.google.com, which sends chats by `XMLHttpRequest` (Google WebChannel, to `geminiweb-pa.clients6.google.com`), requests to that one address are done with the wrapped `fetch` instead, so they go through Veil like the other sites' (`src/xhr.ts`); every other XHR is the browser's own.
 - **It only touches the requests that can carry chat text** (`src/sites.ts`). Everything else goes to the site untouched, without reaching the app.
 - **It fails closed.** If neither the app nor the built-in engine can be used, messages are blocked and the page says why, unless you chose "send without protection" for that site in the popup.
 - **It only catches the files Veil reads.** Files you attach of a type the Veil app reads (PDF and text files) go to the app first; any other file goes to the site untouched. The built-in engine never reads files.
 - **It writes no chat text and no real value to disk:** it stores only your preferences and, for the built-in engine, its settings, rules and activity counts. The values behind the built-in engine's placeholders, which engine each chat used and how many values were replaced in each tab are kept in Chrome's session storage, in memory, until the browser closes.
-- **Its permissions are only** native messaging and storage, on claude.ai and chatgpt.com. Its one content security policy allows the engine's WebAssembly (`'wasm-unsafe-eval'`) and nothing else beyond the default.
+- **Its permissions are only** native messaging and storage, on claude.ai, chatgpt.com and gemini.google.com. Its one content security policy allows the engine's WebAssembly (`'wasm-unsafe-eval'`) and nothing else beyond the default.
 - **It isn't minified,** so you can read the code inside the zip you install.
 
 [THREAT_MODEL.md](THREAT_MODEL.md) says what it protects against and what it doesn't.

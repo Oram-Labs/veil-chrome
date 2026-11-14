@@ -3,7 +3,7 @@
 
 export const HOST_NAME = 'com.veil.app.native';
 
-export type Site = 'claude.ai' | 'chatgpt.com';
+export type Site = 'claude.ai' | 'chatgpt.com' | 'gemini.google.com';
 
 /** A request the page is about to send. */
 export interface WebRequest {
@@ -11,6 +11,10 @@ export interface WebRequest {
   method: string;
   /** Path and query. */
   path: string;
+  /** The host, when the request isn't to the site's own: Gemini's chats go to another one. */
+  host?: string;
+  /** The page's path, which names the chat once it has started. */
+  page?: string;
   /** Base64. Absent for GET. */
   body?: string;
 }
@@ -53,7 +57,8 @@ export interface VeilStatus {
   updates_until?: string;
   mode: 'redact' | 'audit' | 'off';
   fail_closed: boolean;
-  sites: Record<Site, boolean>;
+  /** A Veil app from before a site was added doesn't list it. */
+  sites: Partial<Record<Site, boolean>>;
   /** "Capture traffic" is on in Veil: report what the page does, for debugging. */
   capture?: boolean;
   /** Which attached files to send to Veil. Absent from older versions. */
@@ -140,6 +145,7 @@ export function siteOf(hostname: string): Site | null {
   const host = hostname.toLowerCase().replace(/\.$/, '');
   if (host === 'claude.ai' || host.endsWith('.claude.ai')) return 'claude.ai';
   if (host === 'chatgpt.com' || host.endsWith('.chatgpt.com')) return 'chatgpt.com';
+  if (host === 'gemini.google.com') return 'gemini.google.com';
   return null;
 }
 

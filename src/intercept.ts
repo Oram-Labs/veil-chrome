@@ -5,7 +5,7 @@
 // The text box keeps what the user typed. Only the network request changes,
 // so this keeps working when the sites change their editors.
 
-import { interesting, sends } from './sites';
+import { chatHost, interesting, sends } from './sites';
 import type { Answer, ChunkOut, Decision, Failure, Op, Site } from './protocol';
 import { fromBase64, toBase64 } from './protocol';
 
@@ -66,7 +66,8 @@ export function wrapFetch(
       return realFetch.call(this, input, init);
     }
     const page = new URL(base());
-    if (url.origin !== page.origin || !interesting(site, method, url.pathname)) {
+    const ours = url.protocol === page.protocol && chatHost(site, url.host, page.host);
+    if (!ours || !interesting(site, method, url.pathname, url.host)) {
       return realFetch.call(this, input, init);
     }
     const request = input instanceof Request ? new Request(input, init) : new Request(url.href, init);
@@ -79,6 +80,8 @@ export function wrapFetch(
       site,
       method,
       path: url.pathname + url.search,
+      ...(url.host !== page.host ? { host: url.host } : undefined),
+      page: page.pathname,
       body: body ? toBase64(body) : undefined,
       ...(sending ? channel.attached?.() : undefined),
     });

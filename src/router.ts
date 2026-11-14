@@ -69,7 +69,11 @@ function chatKeyOf(path: string, site: Site): string | null {
     const id = i >= 0 ? segments[i + 1] : undefined;
     return id && /^[A-Za-z0-9_-]{1,64}$/.test(id) ? id : null;
   };
-  const id = site === 'claude.ai' ? after('chat') : after('c');
+  let id: string | null;
+  if (site === 'claude.ai') id = after('chat');
+  else if (site === 'chatgpt.com') id = after('c');
+  // gemini.google.com/app/<id>, and under a Gem, /gem/<gem>/<id>.
+  else id = segments[0] === 'gem' ? after(segments[1] ?? '') : after('app');
   return id ? `${site}:${id}` : null;
 }
 

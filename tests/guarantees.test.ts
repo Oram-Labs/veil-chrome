@@ -36,11 +36,14 @@ function found(re: RegExp): string[] {
 }
 
 describe('permissions', () => {
-  it('are only native messaging and storage, on claude.ai and chatgpt.com', () => {
+  it('are only native messaging and storage, on claude.ai, chatgpt.com and gemini.google.com', () => {
+    const sites = ['https://claude.ai/*', 'https://chatgpt.com/*', 'https://gemini.google.com/*'];
     expect(manifest.permissions).toEqual(['nativeMessaging', 'storage']);
-    expect(manifest.host_permissions).toEqual(['https://claude.ai/*', 'https://chatgpt.com/*']);
+    // Gemini's chats go to geminiweb-pa.clients6.google.com, but the page
+    // sends them, not the extension, so that host needs no permission.
+    expect(manifest.host_permissions).toEqual(sites);
     for (const script of manifest.content_scripts) {
-      expect(script.matches).toEqual(['https://claude.ai/*', 'https://chatgpt.com/*']);
+      expect(script.matches).toEqual(sites);
     }
   });
 
@@ -83,9 +86,12 @@ describe('the network', () => {
 describe('the page', () => {
   it('has only these of its objects replaced', () => {
     // fetch: requests go to Veil first. XMLHttpRequest, WebSocket and EventSource:
-    // wrapped to report traffic while "Capture traffic" is on. streamController
-    // (chatgpt.com): chat data built into the page goes to Veil first.
+    // wrapped to report traffic while "Capture traffic" is on. XMLHttpRequest
+    // (gemini.google.com): requests to Gemini's chat address are done with
+    // the wrapped fetch instead (xhr.ts). streamController (chatgpt.com):
+    // chat data built into the page goes to Veil first.
     expect(found(/(window|XHR)\.\w+\s*=(?!=)/g)).toEqual([
+      'hook.ts: window.XMLHttpRequest =',
       'hook.ts: window.fetch =',
       'observe.ts: XHR.open =',
       'observe.ts: XHR.send =',
