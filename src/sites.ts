@@ -36,11 +36,10 @@ export function interesting(site: Site, method: string, path: string, host?: str
       p.includes('/v1/code/sessions')
     );
   }
-  return (
-    p === '/backend-api/conversations' ||
-    p.startsWith('/backend-api/conversation') ||
-    p.startsWith('/backend-api/f/conversation')
-  );
+  // A visitor who is not logged in is served from /backend-anon, with the
+  // same routes as the signed-in /backend-api.
+  const api = p.startsWith('/backend-api/') ? p.slice('/backend-api'.length) : p.startsWith('/backend-anon/') ? p.slice('/backend-anon'.length) : '';
+  return api === '/conversations' || api.startsWith('/conversation') || api.startsWith('/f/conversation');
 }
 
 /**
