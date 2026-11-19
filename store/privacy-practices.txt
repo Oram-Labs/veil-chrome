@@ -4,7 +4,7 @@ Paste each answer into the field it's named after.
 ------------------------------------------------------------------
 Single purpose description
 ------------------------------------------------------------------
-Veil hides sensitive values, such as names, email addresses, phone numbers and card numbers, from messages and attached documents before claude.ai and chatgpt.com send them, and puts the real values back in the replies. Detection and replacement are done on the user's computer: by the Veil desktop app when it is installed, or by an engine built into the extension when it isn't.
+Veil hides sensitive values, such as names, email addresses, phone numbers and card numbers, from messages and attached documents before claude.ai, chatgpt.com and gemini.google.com send them, and puts the real values back in the replies. Detection and replacement are done on the user's computer: by the Veil desktop app when it is installed, or by an engine built into the extension when it isn't.
 
 ------------------------------------------------------------------
 nativeMessaging justification
@@ -19,7 +19,7 @@ chrome.storage.local keeps the user's per-site setting "Send without Veil when i
 ------------------------------------------------------------------
 Host permission justification
 ------------------------------------------------------------------
-The extension runs only on https://claude.ai/* and https://chatgpt.com/*, the two AI chat sites it protects. On those pages it has to see each outgoing request before it is sent so it can replace sensitive values with placeholders, and see the replies so it can put the real values back. It does not run on, read or change any other site. The built-in engine runs only on these two sites too, and makes no network requests.
+The extension runs only on https://claude.ai/*, https://chatgpt.com/* and https://gemini.google.com/*, the three AI chat sites it protects. On those pages it has to see each outgoing request before it is sent so it can replace sensitive values with placeholders, and see the replies so it can put the real values back. It does not run on, read or change any other site. The built-in engine runs only on these three sites too, and makes no network requests.
 
 ------------------------------------------------------------------
 Are you using remote code?

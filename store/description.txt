@@ -1,6 +1,6 @@
-Use Claude and ChatGPT without handing over your private details.
+Use Claude, ChatGPT and Gemini without handing over your private details.
 
-Veil hides names, email addresses, phone numbers, card numbers and other sensitive values before claude.ai or chatgpt.com send your message. The AI service only sees placeholders. When the reply comes back, Veil puts the real values back in, so you read and copy the answer as if nothing had been hidden.
+Veil hides names, email addresses, phone numbers, card numbers and other sensitive values before claude.ai, chatgpt.com or gemini.google.com send your message. The AI service only sees placeholders. When the reply comes back, Veil puts the real values back in, so you read and copy the answer as if nothing had been hidden.
 
 HOW IT WORKS
 1. You write your message as usual.
@@ -20,7 +20,7 @@ WHAT VEIL HIDES
 • Your own words: client names, project codenames, internal terms and custom rules
 
 ATTACHED DOCUMENTS
-With the Veil app, PDFs and text files you attach (TXT, Markdown, CSV, JSON, code and similar) are redacted the same way before the site uploads them. The site gets their text, with the sensitive values replaced.
+With the Veil app, PDFs and text files you attach (TXT, Markdown, CSV, JSON, code and similar) are redacted the same way before claude.ai or chatgpt.com upload them. The site gets their text, with the sensitive values replaced. Attached files on gemini.google.com are not covered yet.
 
 NOTHING SLIPS THROUGH
 If neither the Veil app nor the built-in engine can protect a message, it waits instead of going out unprotected, and a notice says why. You can turn this off per site if you prefer.
@@ -29,7 +29,7 @@ AT A GLANCE
 The toolbar button shows whether the current site is protected and how many values were hidden in the tab.
 
 FREE BUILT-IN ENGINE, OR THE VEIL APP
-The extension works on its own, for free: its built-in engine hides emails, phone numbers, cards, IBANs, API keys, IP addresses and national IDs, and remembers the real values only while your browser is open, never on disk. The Veil app for Mac, Windows or Linux adds your own terms and patterns, attached documents, name detection, values remembered for good (encrypted), and protection for desktop apps and developer tools; when it is running, the extension uses it. Supported sites: claude.ai and chatgpt.com.
+The extension works on its own, for free: its built-in engine hides emails, phone numbers, cards, IBANs, API keys, IP addresses and national IDs, and remembers the real values only while your browser is open, never on disk. The Veil app for Mac, Windows or Linux adds your own terms and patterns, attached documents, name detection, values remembered for good (encrypted), and protection for desktop apps and developer tools; when it is running, the extension uses it. Supported sites: claude.ai, chatgpt.com (signed in or not) and gemini.google.com.
 
 PRIVACY
 What you type goes only to the Veil app on your computer, or stays in the extension's own engine. The extension's only request of its own reads a version file from getveil.tech, to tell you when a newer Veil is out. It has no analytics or tracking, and it does not collect or sell your data.
