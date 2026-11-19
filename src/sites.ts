@@ -36,6 +36,9 @@ export function interesting(site: Site, method: string, path: string, host?: str
       p.includes('/v1/code/sessions')
     );
   }
+  // A visitor who is not logged in gets ChatGPT's mobile-web page, which sends
+  // the message as a form to /unauth-mweb. Its other calls carry no text.
+  if (p === '/unauth-mweb/conversation/updates') return m === 'POST';
   return (
     p === '/backend-api/conversations' ||
     p.startsWith('/backend-api/conversation') ||

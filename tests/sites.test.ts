@@ -23,6 +23,11 @@ describe('sites', () => {
     expect(interesting('chatgpt.com', 'GET', '/backend-api/conversations?offset=0')).toBe(true);
     expect(interesting('chatgpt.com', 'POST', '/backend-api/sentinel/chat-requirements')).toBe(false);
     expect(interesting('chatgpt.com', 'GET', '/backend-api/me')).toBe(false);
+    // Not logged in: the message goes to /unauth-mweb, and nothing else there carries text.
+    expect(interesting('chatgpt.com', 'POST', '/unauth-mweb/conversation/updates?lightweight_authenticated=0&operationId=x')).toBe(true);
+    expect(interesting('chatgpt.com', 'GET', '/unauth-mweb/conversation/updates')).toBe(false);
+    expect(interesting('chatgpt.com', 'POST', '/unauth-mweb/conversation/prepare?lightweight_authenticated=0')).toBe(false);
+    expect(interesting('chatgpt.com', 'POST', '/unauth-mweb/sentinel/ping')).toBe(false);
   });
 
   it('only blocks requests that may carry text', () => {

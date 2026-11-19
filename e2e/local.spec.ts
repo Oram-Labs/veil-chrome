@@ -148,6 +148,25 @@ for (const site of ['chatgpt.com', 'claude.ai']) {
   });
 }
 
+test('chatgpt.com when not logged in: the form\'s prompt is redacted, and the NDJSON reply is restored', async () => {
+  const page = await context.newPage();
+  await page.goto('https://chatgpt.com/?unauth');
+  const before = received.length;
+  await send(page, `Call me at ${PHONE} or write to ${EMAIL}`);
+  await expect(page.locator('#status')).toHaveText('status 200 done', { timeout: 15_000 });
+  const sent = received.slice(before);
+  expect(sent).toHaveLength(1);
+  expect(sent[0].path).toContain('/unauth-mweb/conversation/updates');
+  const form = new URLSearchParams(sent[0].body);
+  expect(form.get('prompt')).toBe('Call me at [PHONE_1] or write to [EMAIL_1]');
+  // The page's other fields go as it wrote them.
+  expect(form.get('timezone')).toBe('Europe/Bucharest');
+  expect(form.get('imageAttachments')).toBe('[]');
+  expect(sent[0].body).not.toContain('ana.popescu');
+  await expect(page.locator('#reply')).toHaveText(`You said: Call me at ${PHONE} or write to ${EMAIL}`);
+  await page.close();
+});
+
 test('attached files are left to the app: sent as they are with a notice, or held back with Block', async () => {
   const page = await context.newPage();
   await page.goto('https://claude.ai/chat/11111111-2222-4333-8444-555555555555');

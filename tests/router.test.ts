@@ -41,6 +41,7 @@ describe('chat keys', () => {
     expect(chatKey(chatUrl, 'claude.ai')).toBe('claude.ai:11111111-2222-4333-8444-555555555555');
     expect(chatKey('https://chatgpt.com/c/abc-123', 'chatgpt.com')).toBe('chatgpt.com:abc-123');
     expect(chatKey('https://chatgpt.com/g/g-x/c/abc-123', 'chatgpt.com')).toBe('chatgpt.com:abc-123');
+    expect(chatKey('https://chatgpt.com/uc/6aff1841-5480-83ea-98f4-c0017a010e44', 'chatgpt.com')).toBe('chatgpt.com:6aff1841-5480-83ea-98f4-c0017a010e44');
     expect(chatKey('https://chatgpt.com/', 'chatgpt.com')).toBeNull();
     expect(chatKey('https://claude.ai/new', 'claude.ai')).toBeNull();
     expect(chatKey(undefined, 'claude.ai')).toBeNull();

@@ -71,7 +71,8 @@ function chatKeyOf(path: string, site: Site): string | null {
   };
   let id: string | null;
   if (site === 'claude.ai') id = after('chat');
-  else if (site === 'chatgpt.com') id = after('c');
+  // /c/<id>, and /uc/<id> when not logged in.
+  else if (site === 'chatgpt.com') id = after('c') ?? after('uc');
   // gemini.google.com/app/<id>, and under a Gem, /gem/<gem>/<id>.
   else id = segments[0] === 'gem' ? after(segments[1] ?? '') : after('app');
   return id ? `${site}:${id}` : null;

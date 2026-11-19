@@ -106,7 +106,44 @@ const page = (site: string) => `<!doctype html>
       }
     };
     const site = ${JSON.stringify(site)};
+    // chatgpt.com when not logged in (open the page with ?unauth): a form to
+    // /unauth-mweb, and an NDJSON reply.
+    const unauth = site === 'chatgpt.com' && location.search.includes('unauth');
+    async function sendUnauth(text) {
+      const reply = document.getElementById('reply');
+      const status = document.getElementById('status');
+      reply.textContent = '';
+      const body = new URLSearchParams({ conversationState: '{"messages":[],"userMessageCount":0}', prompt: text, imageAttachments: '[]', timezone: 'Europe/Bucharest' });
+      let resp;
+      try {
+        resp = await fetch('/unauth-mweb/conversation/updates?lightweight_authenticated=0&operationId=op-1', { method: 'POST', headers: { 'X-Web-Mobile-Conversation-Source': '2' }, body });
+      } catch (e) {
+        status.textContent = 'error ' + e;
+        return;
+      }
+      status.textContent = 'status ' + resp.status;
+      const reader = resp.body.getReader();
+      const dec = new TextDecoder();
+      let buf = '';
+      for (;;) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        buf += dec.decode(value, { stream: true });
+        let i;
+        while ((i = buf.indexOf('\\n')) >= 0) {
+          const line = buf.slice(0, i);
+          buf = buf.slice(i + 1);
+          if (!line) continue;
+          const v = JSON.parse(line);
+          if (v.type !== 'content') continue;
+          if (v.mode === 'replace') reply.textContent = v.markdown;
+          else reply.textContent += v.markdown;
+        }
+      }
+      status.textContent += ' done';
+    }
     document.getElementById('send').onclick = async () => {
+      if (unauth) return sendUnauth(document.getElementById('box').value);
       const text = document.getElementById('box').value;
       const reply = document.getElementById('reply');
       const status = document.getElementById('status');
@@ -212,6 +249,20 @@ export async function startSites(tls: { key: Buffer; cert: Buffer }): Promise<{ 
       if (req.url === '/upload') {
         res.writeHead(200, { 'content-type': 'application/json' });
         res.end('{"ok":true}');
+        return;
+      }
+      if (req.url?.startsWith('/unauth-mweb/conversation/updates')) {
+        const text = `You said: ${new URLSearchParams(body).get('prompt') ?? ''}`;
+        res.writeHead(200, { 'content-type': 'application/vnd.openai.conversation-source+ndjson; charset=utf-8', 'cache-control': 'no-cache' });
+        const line = (v: object) => JSON.stringify({ version: 2, ...v }) + '\n';
+        res.write(line({ type: 'control', detail: { kind: 'conversation-id', conversationId: CHAT_ID, canonicalPath: `/uc/${CHAT_ID}` } }));
+        res.write(line({ type: 'content', messageId: 'a1', revision: 1, mode: 'replace', markdown: '' }));
+        // Split every 7 characters, so a placeholder is cut across lines.
+        for (let i = 0, rev = 2; i < text.length; i += 7, rev++) {
+          res.write(line({ type: 'content', messageId: 'a1', revision: rev, mode: 'append', baseRevision: rev - 1, markdown: text.slice(i, i + 7) }));
+          await new Promise((r) => setTimeout(r, 10));
+        }
+        res.end();
         return;
       }
       const json = JSON.parse(body);
