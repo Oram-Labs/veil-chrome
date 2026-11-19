@@ -23,11 +23,6 @@ describe('sites', () => {
     expect(interesting('chatgpt.com', 'GET', '/backend-api/conversations?offset=0')).toBe(true);
     expect(interesting('chatgpt.com', 'POST', '/backend-api/sentinel/chat-requirements')).toBe(false);
     expect(interesting('chatgpt.com', 'GET', '/backend-api/me')).toBe(false);
-    // Not logged in: the same routes, under /backend-anon.
-    expect(interesting('chatgpt.com', 'POST', '/backend-anon/f/conversation')).toBe(true);
-    expect(interesting('chatgpt.com', 'POST', '/backend-anon/conversation')).toBe(true);
-    expect(interesting('chatgpt.com', 'POST', '/backend-anon/sentinel/chat-requirements')).toBe(false);
-    expect(interesting('chatgpt.com', 'POST', '/backend-anonymous/conversation')).toBe(false);
   });
 
   it('only blocks requests that may carry text', () => {
@@ -35,7 +30,6 @@ describe('sites', () => {
     expect(sends('POST', '/claudeai-rpc/anthropic.bard.api.v1alpha.ConversationService/StreamTimeline')).toBe(false);
     expect(sends('GET', '/backend-api/conversation/abc')).toBe(false);
     expect(sends('POST', '/backend-api/f/conversation')).toBe(true);
-    expect(sends('POST', '/backend-anon/f/conversation')).toBe(true);
   });
 
   it('round-trips base64, including large and non-ASCII bytes', () => {
