@@ -69,6 +69,17 @@ describe.skipIf(!have)('the built-in engine', () => {
     expect(await e.available()).toBe(false);
   });
 
+  it('redacts Romanian CNPs and national phone numbers from the start', async () => {
+    const { engine: e } = engine();
+    const done = await e.ask<{ body: string }>('request', send('CNP 1800101420010, tel 0722 123 456, nr 1800101420011'));
+    const body = JSON.parse(Buffer.from((done as { result: { body: string } }).result.body, 'base64').toString());
+    const text = body.messages[0].content.parts[0] as string;
+    expect(text).not.toContain('1800101420010');
+    expect(text).not.toContain('0722 123 456');
+    // A 13-digit number whose check digit is wrong is not a CNP.
+    expect(text).toContain('1800101420011');
+  });
+
   it('restores a chat after Chrome stops the service worker, but not after the browser restarts', async () => {
     const first = engine();
     const sent = await first.engine.ask<{ body: string }>('request', send('write to ana@example.com'));

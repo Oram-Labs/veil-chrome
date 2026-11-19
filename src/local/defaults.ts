@@ -1,7 +1,8 @@
 // What the settings screens start from. These are the Veil app's defaults,
 // in the shape of its settings, so the screens shared with the app (veil-ui)
 // work unchanged; only `behavior`, `web`, `documents` and `vault.ttl_days`
-// reach the built-in engine.
+// reach the built-in engine. The detector options differ from the app's in one
+// way: Romanian phone numbers and CNPs are recognised from the start.
 
 import type { RulesFile, Settings } from 'veil-ui';
 
@@ -102,7 +103,8 @@ export const DEFAULT_RULES: RulesFile = {
     "phone": {
       "enabled": true,
       "regions": [
-        "US"
+        "US",
+        "RO"
       ]
     },
     "card": {
@@ -126,7 +128,8 @@ export const DEFAULT_RULES: RulesFile = {
       "locales": [
         "US",
         "GB",
-        "DE"
+        "DE",
+        "RO"
       ]
     },
     "ner": {
