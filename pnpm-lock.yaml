@@ -777,7 +777,7 @@ packages:
     resolution: {integrity: sha512-iwDZqg0QAGrg9Rav5H4n0M64c3mkR59cJ6wQp+7C4nI0gsmExaedaYLNO44eT4AtBBwjbTiGPMlt2Md0T9H9JQ==}
 
   veil-engine@file:vendor/veil-engine-0.2.1.tgz:
-    resolution: {integrity: sha512-BRAvoRhwGbv2iS/ae0HJJr/Oq6cU/84n4gyZ2JCUj4k5k1L0rpy6HvQkmaWXW6CC0VTQBhbVHr/L+jPby4d/EQ==, tarball: file:vendor/veil-engine-0.2.1.tgz}
+    resolution: {integrity: sha512-CiZKDGDKVER35IeiD7/KCTPEVrm5pnPGW+pv+vmpQ4OEZLOHPMY4WmVvicCoa/tLIjBuPH18bWGpv0qrEEFIZg==, tarball: file:vendor/veil-engine-0.2.1.tgz}
     version: 0.2.1
 
   veil-ui@file:vendor/veil-ui-0.1.5.tgz:
